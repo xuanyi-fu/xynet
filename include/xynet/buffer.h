@@ -90,7 +90,7 @@ public:
       }
       else
       {
-        m_iterator->iov_base += len;
+        m_iterator->iov_base = static_cast<char *>(m_iterator->iov_base) + len;
         m_iterator->iov_len  -= len;
         len = 0;
       }
