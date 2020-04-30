@@ -1,0 +1,8 @@
+.idea/
+build/
+compile_commands.json
+compile_flags.txt
+.clion.source.upload.marker
+.vscode/
+.clangd/
+
