@@ -23,14 +23,14 @@ public:
 
   explicit file_descriptor_base(int fd) noexcept : m_fd{fd} {}
   file_descriptor_base(file_descriptor_base&& other)noexcept :m_fd{std::exchange(other.m_fd, -1)}{}
-  ~file_descriptor_base(){ if(valid()){close();}}
+  ~file_descriptor_base(){ if(valid()){close__();}}
   void set(int fd) noexcept
   {
     m_fd = fd;
   }
   [[nodiscard]] int get() const noexcept {return m_fd;}
   [[nodiscard]] bool valid() const noexcept {return m_fd >= 0;}
-  void close() noexcept {::close(std::exchange(m_fd, -1));}
+  void close__() noexcept {::close(std::exchange(m_fd, -1));}
 private:
   int m_fd;
 };

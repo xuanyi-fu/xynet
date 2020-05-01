@@ -201,7 +201,7 @@ template<typename... Ts, std::size_t... sizes>
 const_buffer_sequence(std::span<Ts, sizes>... spans) -> const_buffer_sequence<void, sizeof...(Ts)>;
 
 template<std::size_t... sizes>
-const_buffer_sequence(std::span<std::byte, sizes>... spans) -> const_buffer_sequence<void, sizeof...(sizes)>;
+const_buffer_sequence(std::span<const std::byte, sizes>... spans) -> const_buffer_sequence<void, sizeof...(sizes)>;
 
 template<typename BufferRange>
 requires std::ranges::viewable_range<BufferRange&>

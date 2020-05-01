@@ -32,12 +32,32 @@ struct null_buffer
 template<detail::FileDescriptorPolicy P, typename F>
 struct operation_close
 {
-  struct async_close_impl : public async_operation<P, async_close_impl>
+  template<bool enable_timeout>
+  struct async_close_impl 
+  : public async_operation<P, async_close_impl<enable_timeout>, enable_timeout>
   {
     async_close_impl(F& socket) noexcept
-      :async_operation<P, async_close_impl>{&async_close_impl::on_recv_completed}
+    requires (enable_timeout == false)
+      :async_operation<P, async_close_impl, enable_timeout>
+      {&async_close_impl::on_recv_completed}
       ,m_socket{socket}
     {}
+
+    template<typename Duration, bool enable_timeout2 = enable_timeout>
+    async_close_impl(F& socket, Duration&& duration) noexcept
+    requires (enable_timeout2 == true)
+    :async_operation<P, async_close_impl, enable_timeout>
+    {
+      &async_close_impl::on_recv_completed,
+      std::forward<Duration>(duration)
+    }
+    ,m_socket{socket}
+    {}
+
+    auto initial_check() const noexcept
+    {
+      return m_socket.valid();
+    }
 
     static void on_recv_completed(async_operation_base *base) noexcept
     {
@@ -45,17 +65,17 @@ struct operation_close
       op->update_result();
     }
 
-    void try_start()
+    [[nodiscard]]
+    auto try_start()
     noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
     {
-      auto recv = [this](::io_uring_sqe* sqe)
+      return [this](::io_uring_sqe* sqe)
       {
         ::io_uring_prep_recv(sqe, m_socket.get(),
           null_buffer::data(), null_buffer::size(), 0);
 
         sqe->user_data = reinterpret_cast<uintptr_t>(this);
       };
-      async_operation_base::get_service()->try_submit_io(recv);
     }
 
     void update_result()
@@ -71,7 +91,7 @@ struct operation_close
       }
       else
       {
-        try_start();
+        async_operation<P, async_close_impl<enable_timeout>, enable_timeout>::submit();
       }
     }
 
@@ -88,10 +108,19 @@ struct operation_close
 
 
   [[nodiscard]]
-  decltype(auto) async_close()
+  decltype(auto) close()
   noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
   {
-    return async_close_impl{*static_cast<F*>(this)};
+    return async_close_impl<false>{*static_cast<F*>(this)};
+  }
+
+
+  template<typename Duration>
+  [[nodiscard]]
+  decltype(auto) close_timeout(Duration&& duration)
+  noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
+  {
+    return async_close_impl<true>{*static_cast<F*>(this), std::forward<Duration>(duration)};
   }
 
 };

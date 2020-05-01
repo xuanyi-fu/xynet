@@ -13,23 +13,37 @@ namespace xynet
 template<detail::FileDescriptorPolicy P, typename F>
 struct operation_accept
 {
-  template<typename F2>
-  struct async_accept : public async_operation<P, async_accept<F2>>
+  template<typename F2, bool enable_timeout = false>
+  struct async_accept : public async_operation<P, async_accept<F2, enable_timeout>, enable_timeout>
   {
-    using base = async_operation<P, async_accept<F2>>;
 
     async_accept(F& listen_socket, F2& peer_socket) noexcept
-      : async_operation<P, async_accept<F2>>{}
-      , m_listen_socket{listen_socket}
-      , m_peer_socket{peer_socket}
-      , m_peer_addr{}
-      , m_addrlen{sizeof(::sockaddr_in)}
+    requires(enable_timeout == false)
+    : async_operation<P, async_accept<F2, enable_timeout>, enable_timeout>{}
+    , m_listen_socket{listen_socket}
+    , m_peer_socket{peer_socket}
+    , m_peer_addr{}
+    , m_addrlen{sizeof(::sockaddr_in)}
     {}
 
-    void try_start()
-    noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
+    template<typename Duration, bool enable_timeout2 = enable_timeout>
+    requires (enable_timeout2 == true)
+    async_accept(F& listen_socket, F2& peer_socket, Duration&& duration)
+    : async_operation<P, async_accept<F2, enable_timeout>, enable_timeout>{std::forward<Duration>(duration)}
+    , m_listen_socket{listen_socket}
+    , m_peer_socket{peer_socket}
+    , m_peer_addr{}
+    , m_addrlen{sizeof(::sockaddr_in)}
+    {}
+
+    auto initial_check() const noexcept
     {
-      auto accept = [this](::io_uring_sqe *sqe)
+      return true;
+    }
+
+    auto try_start() noexcept
+    {
+      return [this](::io_uring_sqe *sqe)
       {
         ::io_uring_prep_accept(sqe,
                                m_listen_socket.get(),
@@ -39,7 +53,6 @@ struct operation_accept
 
         sqe->user_data = reinterpret_cast<uintptr_t>(this);
       };
-      async_operation_base::get_service()->try_submit_io(accept);
     }
 
     auto get_result()
@@ -66,10 +79,16 @@ struct operation_accept
 
   template<typename F2>
   [[nodiscard]]
-  decltype(auto) accept(F2& peer_socket)
-  noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
+  decltype(auto) accept(F2& peer_socket) noexcept 
   {
-    return async_accept<F2>{*static_cast<F*>(this), peer_socket};
+    return async_accept<F2, false>{*static_cast<F*>(this), peer_socket};
+  }
+
+  template<typename F2, typename Duration>
+  [[nodiscard]]
+  decltype(auto) accept_timeout(F2& peer_socket, Duration&& duration) noexcept 
+  {
+    return async_accept<F2, true>{*static_cast<F*>(this), peer_socket, std::forward<Duration>(duration)};
   }
 
 };

@@ -18,6 +18,27 @@ using namespace xynet;
 
 using socket_exception_t = xynet::socket_t;
 
+auto echo(socket_exception_t peer_socket) -> task<>
+{
+  auto buffer = std::vector<char>(10);
+  try
+  {
+    for(;;)
+    {
+      auto read_bytes = co_await peer_socket.recv(buffer);
+      auto send_bytes = co_await peer_socket.send(std::span{buffer.begin(), read_bytes});
+    }
+  }
+  catch(const std::system_error& error)
+  {
+    std::cout<<error.what()<<"\n";
+  }
+
+  peer_socket.shutdown();
+  co_await peer_socket.close();
+  co_return;
+}
+
 auto acceptor(io_service& service) -> task<>
 {
   auto listen_socket = socket_exception_t{};
@@ -30,31 +51,14 @@ auto acceptor(io_service& service) -> task<>
     listen_socket.listen();
 
     co_await listen_socket.accept(peer_socket);
-
-    auto buf = std::string(1000, 'X');
-    auto start_time = std::chrono::system_clock::now();
-    for(int i = 0; i < 1; ++i)
-    {
-      co_await peer_socket.send(buf);
-    }
-    auto transfer_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time);
-    std::cout<<transfer_time.count()<<"\n";
+    co_await echo(std::move(peer_socket));
   }
   catch (std::exception& ex)
   {
     std::cout<<ex.what();
   }
-
-  try
-  {
-    peer_socket.shutdown();
-    co_await peer_socket.async_close();
-  }
-  catch (std::exception& ex)
-  {
-    std::cout<<ex.what();
-  }
-
+  
+  listen_socket.shutdown();
   service.request_stop();
   co_return;
 }

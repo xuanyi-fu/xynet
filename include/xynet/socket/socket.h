@@ -36,7 +36,7 @@ using socket_t = file_descriptor<
         operation_listen,
         operation_accept,
         operation_send,
-        operation_recv_all,
+        operation_recv,
         operation_close
       >
     , with<exception_policy>::template map_front

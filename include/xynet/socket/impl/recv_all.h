@@ -14,14 +14,17 @@ namespace xynet
 {
 
 template<detail::FileDescriptorPolicy P, typename F>
-struct operation_recv_all
+struct operation_recv
 {
-  template<typename BufferSequence>
-  struct async_recvmsg : public async_operation<P, async_recvmsg<BufferSequence>>
+  template<typename BufferSequence, bool enable_timeout_each>
+  struct async_recvmsg 
+  : public async_operation<P, 
+  async_recvmsg<BufferSequence, enable_timeout_each>, enable_timeout_each>
   {
     template<typename... Args>
     async_recvmsg(F& socket, Args&&... args) noexcept
-      :async_operation<P, async_recvmsg<BufferSequence>>{&async_recvmsg::on_recv_completed}
+    requires (enable_timeout_each == false)
+      :async_operation<P, async_recvmsg, enable_timeout_each>{&async_recvmsg::on_recv_completed}
       ,m_socket{socket}
       ,m_buffers{static_cast<Args&&>(args)...}
       ,m_bytes_transferred{}
@@ -31,16 +34,43 @@ struct operation_recv_all
                m_msghdr.msg_iovlen) = m_buffers.get_iov_span();
     }
 
+    template<
+    typename Duration, 
+    bool enable_timeout_each2 = enable_timeout_each,
+    typename... Args>
+    async_recvmsg(F& socket, Duration&& duration, Args&&... args) noexcept
+    requires (enable_timeout_each == true)
+    :async_operation<P, async_recvmsg, enable_timeout_each>
+    {
+      &async_recvmsg::on_recv_completed,
+      std::forward<Duration>(duration)
+    }
+    ,m_socket{socket}
+    ,m_buffers{static_cast<Args&&>(args)...}
+    ,m_bytes_transferred{}
+    ,m_msghdr{}
+    {
+      std::tie(m_msghdr.msg_iov,
+               m_msghdr.msg_iovlen) = m_buffers.get_iov_span();
+    }
+
+    auto initial_check() const noexcept
+    {
+      return true;
+    }
+
+
     static void on_recv_completed(async_operation_base *base) noexcept
     {
-      auto *op = static_cast<async_recvmsg<BufferSequence>*>(base);
+      auto *op = static_cast<async_recvmsg*>(base);
       op->update_result();
     }
 
-    void try_start()
+    [[nodiscard]]
+    auto try_start()
     noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
     {
-      auto recvmsg = [this](::io_uring_sqe* sqe)
+      return [this](::io_uring_sqe* sqe)
       {
         ::io_uring_prep_recvmsg(sqe,
                                 m_socket.get(),
@@ -49,7 +79,6 @@ struct operation_recv_all
 
         sqe->user_data = reinterpret_cast<uintptr_t>(this);
       };
-      async_operation_base::get_service()->try_submit_io(recvmsg);
     }
 
     void update_result()
@@ -74,7 +103,8 @@ struct operation_recv_all
         }
         else
         {
-          try_start();
+          async_operation<P, async_recvmsg<BufferSequence, enable_timeout_each>, 
+          enable_timeout_each>::submit();
         }
       }
     }
@@ -102,10 +132,19 @@ struct operation_recv_all
 
   template<typename... Args>
   [[nodiscard]]
-  decltype(auto) recv_all(Args&&... args)
+  decltype(auto) recv(Args&&... args)
   noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
   {
-    return async_recvmsg<decltype(buffer_sequence{std::forward<Args>(args)...})>{*static_cast<F*>(this), std::forward<Args>(args)...};
+    return async_recvmsg<decltype(buffer_sequence{std::forward<Args>(args)...}), false>
+    {*static_cast<F*>(this), std::forward<Args>(args)...};
+  }
+
+  template<typename Duration, typename... Args>
+  [[nodiscard]]
+  decltype(auto) recv_timeout_each(Duration&& duration, Args&&... args)
+  {
+    return async_recvmsg<decltype(buffer_sequence{std::forward<Args>(args)...}), true>
+    {*static_cast<F*>(this), std::forward<Duration>(duration), std::forward<Args>(args)...};
   }
 
 };
