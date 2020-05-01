@@ -110,15 +110,15 @@ struct operation_recv
 
     auto get_result()
     noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
-    ->detail::file_descriptor_operation_return_type_t<P, int>
+    ->detail::file_descriptor_operation_return_type_t<P, std::size_t>
     {
       if(async_operation_base::get_res() == 0)
       {
         return async_throw_or_return<P>(
           xynet_error_instance::make_error_code(xynet_error::eof),
-          m_bytes_transferred);
+          static_cast<std::size_t>(m_bytes_transferred));
       }
-      return async_throw_or_return<P>(async_operation_base::get_error_code(), m_bytes_transferred);
+      return async_throw_or_return<P>(async_operation_base::get_error_code(), static_cast<std::size_t>(m_bytes_transferred));
     }
 
   private:
@@ -184,7 +184,7 @@ struct operation_recv
 
     auto get_result()
     noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
-    ->detail::file_descriptor_operation_return_type_t<P, int>
+    ->detail::file_descriptor_operation_return_type_t<P, std::size_t>
     {
       if(async_operation_base::get_res() == 0)
       {
@@ -192,7 +192,7 @@ struct operation_recv
           xynet_error_instance::make_error_code(xynet_error::eof), 0);
       }
       return async_throw_or_return<P>(async_operation_base::get_error_code()
-      , async_operation_base::get_res());
+      , static_cast<std::size_t>(async_operation_base::get_res()));
     }
 
   private:
