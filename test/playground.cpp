@@ -20,12 +20,13 @@ using socket_exception_t = xynet::socket_t;
 
 auto echo(socket_exception_t peer_socket) -> task<>
 {
-  auto buffer = std::vector<char>(10);
+  auto buffer = std::vector<char>(1024);
   try
   {
     for(;;)
     {
-      auto read_bytes = co_await peer_socket.recv(buffer);
+      auto read_bytes = co_await peer_socket.recv_some(buffer);
+      [[maybe_unused]]
       auto send_bytes = co_await peer_socket.send(std::span{buffer.begin(), read_bytes});
     }
   }
