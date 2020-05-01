@@ -12,6 +12,7 @@
 #include "xynet/coroutine/task.h"
 #include "xynet/coroutine/sync_wait.h"
 #include "xynet/coroutine/when_all.h"
+#include "xynet/coroutine/async_scope.h"
 
 
 using namespace xynet;
@@ -42,25 +43,36 @@ auto echo(socket_exception_t peer_socket) -> task<>
 
 auto acceptor(io_service& service) -> task<>
 {
-  auto listen_socket = socket_exception_t{};
-  auto peer_socket = socket_exception_t{};
+  auto scope = async_scope{};
+  auto ex = std::exception_ptr{};
   try
   {
+    auto listen_socket = socket_exception_t{};
     listen_socket.init();
     listen_socket.reuse_address();
     listen_socket.bind(socket_address{2012});
     listen_socket.listen();
-
-    co_await listen_socket.accept(peer_socket);
-    co_await echo(std::move(peer_socket));
+    
+    for(;;)
+    {
+      auto peer_socket = socket_exception_t{};
+      co_await listen_socket.accept(peer_socket);
+      scope.spawn(echo(std::move(peer_socket)));
+    }
   }
-  catch (std::exception& ex)
+  catch (...)
   {
-    std::cout<<ex.what();
+    ex = std::current_exception();
   }
-  
-  listen_socket.shutdown();
+
+  co_await scope.join();
   service.request_stop();
+
+  if(ex)
+  {
+    std::rethrow_exception(ex);
+  }
+
   co_return;
 }
 

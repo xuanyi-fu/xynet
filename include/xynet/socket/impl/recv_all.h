@@ -128,6 +128,9 @@ struct operation_recv
     ::msghdr m_msghdr;
   };
 
+  // TODO: refactor async_recv and async_recv_some 
+  // to make async_recvmsg_some reuse the code in async_recv will make async_recv a mess
+  // just copy and create a new class now
   template<typename BufferSequence, bool enable_timeout>
   struct async_recvmsg_some
   : public async_operation<P, 
