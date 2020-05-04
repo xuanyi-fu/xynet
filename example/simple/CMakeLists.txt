@@ -7,3 +7,13 @@ add_executable(simple_daytime daytime.cpp)
 target_link_libraries(simple_daytime 
 PRIVATE example_common 
 PRIVATE xynet)
+
+add_executable(simple_echo echo.cpp)
+target_link_libraries(simple_echo
+PRIVATE example_common 
+PRIVATE xynet)
+
+add_executable(simple_echo_revised echo_revised.cpp)
+target_link_libraries(simple_echo_revised
+PRIVATE example_common 
+PRIVATE xynet)

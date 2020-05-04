@@ -10,12 +10,13 @@
 using namespace std;
 using namespace xynet;
 
-inline constexpr static const uint16_t DAYTIME_PORT = 25566;
+inline constexpr static const uint16_t DAYTIME_PORT = 2013;
 
 auto daytime(socket_t peer_socket) -> task<>
 {
   auto time_t_now = chrono::system_clock::to_time_t(chrono::system_clock::now());
   auto* tm_now = localtime(&time_t_now);
+  
   stream_buffer buf{};
   auto os = ostream(&buf);
   os << put_time(tm_now, "%c\n");
