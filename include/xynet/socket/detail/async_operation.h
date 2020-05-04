@@ -16,9 +16,6 @@
 namespace xynet
 {
 
-namespace
-{
-
 template<bool enable_timeout>
 struct timeout_storage
 {
@@ -48,7 +45,6 @@ struct timeout_storage<false>
   }
 };
 
-}
 
 template<
 detail::FileDescriptorPolicy P, 

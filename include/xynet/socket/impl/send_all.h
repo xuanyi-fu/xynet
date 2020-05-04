@@ -109,7 +109,8 @@ struct operation_send
     noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
     ->detail::file_descriptor_operation_return_type_t<P, std::size_t>
     {
-      return async_throw_or_return<P>(async_operation_base::get_error_code(), static_cast<std::size_t>(m_bytes_transferred));
+      return async_throw_or_return<P>(async_operation_base::get_error_code(), 
+      static_cast<std::size_t>(m_bytes_transferred));
     }
 
   private:
