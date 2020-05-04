@@ -30,7 +30,6 @@ struct operation_send
       ,m_socket{socket}
       ,m_buffers{static_cast<Args&&>(args)...}
       ,m_bytes_transferred{}
-      ,m_msghdr{}
     {
       std::tie(m_msghdr.msg_iov,
                m_msghdr.msg_iovlen) = m_buffers.get_iov_span();
@@ -49,7 +48,6 @@ struct operation_send
     ,m_socket{socket}
     ,m_buffers{static_cast<Args&&>(args)...}
     ,m_bytes_transferred{}
-    ,m_msghdr{}
     {
       std::tie(m_msghdr.msg_iov,
           m_msghdr.msg_iovlen) = m_buffers.get_iov_span();
@@ -117,7 +115,7 @@ struct operation_send
     F& m_socket;
     BufferSequence m_buffers;
     int m_bytes_transferred;
-    ::msghdr m_msghdr;
+    ::msghdr m_msghdr = ::msghdr{.msg_flags = MSG_NOSIGNAL};
   };
 
 

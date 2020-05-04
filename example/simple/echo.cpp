@@ -5,7 +5,7 @@ using namespace std;
 using namespace xynet;
 
 inline constexpr static const uint16_t ECHO_PORT = 2007;
-inline constexpr static const uint16_t ECHO_BUFFER_SIZE = 8192;
+inline constexpr static const uint16_t ECHO_BUFFER_SIZE = 512;
 
 auto echo(socket_t peer_socket) -> task<>
 {

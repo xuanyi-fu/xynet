@@ -16,6 +16,7 @@
 #include "xynet/socket/impl/shutdown.h"
 
 #include "xynet/socket/impl/accept.h"
+#include "xynet/socket/impl/connect.h"
 #include "xynet/socket/impl/send_all.h"
 #include "xynet/socket/impl/recv_all.h"
 #include "xynet/socket/impl/close.h"
@@ -35,6 +36,7 @@ using socket_t = file_descriptor<
         operation_bind,
         operation_listen,
         operation_accept,
+        operation_connect,
         operation_send,
         operation_recv,
         operation_close

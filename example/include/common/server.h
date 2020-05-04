@@ -8,6 +8,8 @@
 #include "xynet/coroutine/sync_wait.h"
 #include "xynet/coroutine/async_scope.h"
 
+#include <iostream>
+
 auto acceptor(auto client,
               xynet::io_service& service,
               uint16_t port) 
@@ -31,7 +33,10 @@ auto acceptor(auto client,
       scope.spawn(client(std::move(peer_socket)));
     }
   }
-  catch(...){ex = std::current_exception();}
+  catch(...)
+  {
+    ex = std::current_exception();
+  }
 
   co_await scope.join();
   service.request_stop();

@@ -35,6 +35,12 @@ public:
   [[nodiscard]]
   std::string to_str() const noexcept;
 
+  [[nodiscard]]
+  const ::sockaddr_in* as_sockaddr_in() const noexcept
+  {
+    return reinterpret_cast<const ::sockaddr_in*>(this);
+  } 
+
   friend std::ostream& operator<<(std::ostream&,
                                   const socket_address& address);
 

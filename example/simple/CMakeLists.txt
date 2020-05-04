@@ -17,3 +17,8 @@ add_executable(simple_echo_revised echo_revised.cpp)
 target_link_libraries(simple_echo_revised
 PRIVATE example_common 
 PRIVATE xynet)
+
+add_executable(simple_chargen chargen.cpp)
+target_link_libraries(simple_chargen
+PRIVATE example_common 
+PRIVATE xynet)
