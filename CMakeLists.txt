@@ -9,3 +9,4 @@ enable_testing()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib)
 add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+add_subdirectory(${PROJECT_SOURCE_DIR}/example)

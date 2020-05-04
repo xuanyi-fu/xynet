@@ -3,7 +3,7 @@
 //
 
 #include "xynet/io_service.h"
-#include "xynet/scope_guard.h"
+#include "xynet/detail/scope_guard.h"
 #include <utility>
 #include <sys/eventfd.h>
 #include <unistd.h>

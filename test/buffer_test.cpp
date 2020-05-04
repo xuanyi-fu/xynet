@@ -9,5 +9,4 @@ using namespace xynet;
 
 TEST_CASE("construct a buffer with one array")
 {
-  std::ranges::views::all
 }
