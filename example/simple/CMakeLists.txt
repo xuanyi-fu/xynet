@@ -22,3 +22,8 @@ add_executable(simple_chargen chargen.cpp)
 target_link_libraries(simple_chargen
 PRIVATE example_common 
 PRIVATE xynet)
+
+add_executable(simple_time time.cpp)
+target_link_libraries(simple_time
+PRIVATE example_common 
+PRIVATE xynet)

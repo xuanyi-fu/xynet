@@ -3,9 +3,8 @@
 #include "xynet/stream_buffer.h"
 #include <chrono>
 #include <iomanip>
-#include <ostream>
-
 #include <iostream>
+#include <time.h>
 
 using namespace std;
 using namespace xynet;
@@ -15,11 +14,12 @@ inline constexpr static const uint16_t DAYTIME_PORT = 2013;
 auto daytime(socket_t peer_socket) -> task<>
 {
   auto time_t_now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-  auto* tm_now = localtime(&time_t_now);
+  auto tm_now = ::tm{};
+  localtime_r(&time_t_now, &tm_now);
   
   stream_buffer buf{};
   auto os = ostream(&buf);
-  os << put_time(tm_now, "%c\n");
+  os << put_time(&tm_now, "%c\n");
   auto send_span = buf.data();
   
   try

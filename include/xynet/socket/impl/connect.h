@@ -26,7 +26,7 @@ struct operation_connect
 
     template<typename Duration, bool enable_timeout2 = enable_timeout>
     requires (enable_timeout2 == true)
-    async_connect(F& listen_socket, sockaddr_in addr, Duration&& duration)
+    async_connect(F& socket, sockaddr_in addr, Duration&& duration)
     : async_operation<P, async_connect<enable_timeout>, enable_timeout>{std::forward<Duration>(duration)}
     , m_socket{socket}
     , m_addr{addr}
@@ -44,7 +44,7 @@ struct operation_connect
         ::io_uring_prep_connect(sqe,
                                m_socket.get(),
                                reinterpret_cast<sockaddr *>(&m_addr),
-                               &m_addrlen);
+                               m_addrlen);
 
         sqe->user_data = reinterpret_cast<uintptr_t>(this);
       };
@@ -76,7 +76,7 @@ struct operation_connect
     return async_connect<false>{*static_cast<F*>(this), *address.as_sockaddr_in()};
   }
 
-  template<typename F2, typename Duration>
+  template<typename Duration>
   [[nodiscard]]
   decltype(auto) connect_timeout(const socket_address& address, Duration&& duration) noexcept 
   {
