@@ -24,11 +24,6 @@ auto ttcp_server(socket_t peer_socket) -> task<>
       puts("ttcp_message number must be greater than 0.");
       co_return;
     }
-    else if(!(message.length > 0))
-    {
-      puts("ttcp_message length must be greater than 0.");
-      co_return;
-    }
 
     printf("Receive number: %d, Receive length: %d\n", message.number, message.length);
 
