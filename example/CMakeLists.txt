@@ -4,3 +4,4 @@ INTERFACE
 ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_subdirectory(simple)
+add_subdirectory(ttcp)
