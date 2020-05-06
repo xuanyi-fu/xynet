@@ -1,12 +1,12 @@
 #include "common/server.h"
 #include "xynet/coroutine/single_consumer_async_auto_reset_event.h"
-#include <deque>
+#include <forward_list>
 
 using namespace std;
 using namespace xynet;
 
 inline constexpr static const uint16_t ECHO_PORT = 2007;
-inline constexpr static const uint16_t ECHO_BUFFER_SIZE = 8196;
+inline constexpr static const size_t ECHO_BUFFER_SIZE = 65536;
 
 class echo_client
 {
@@ -47,7 +47,7 @@ public:
         auto buf = vector<byte>(ECHO_BUFFER_SIZE);
         auto read_bytes = co_await m_socket.recv_some(buf);
         buf.resize(read_bytes);
-        m_write_msgs.emplace_back(std::move(buf));
+        m_write_msgs.emplace_front(std::move(buf));
         m_event.set();
       }
     }catch(...)
@@ -74,7 +74,7 @@ private:
   }
 
   socket_t m_socket;
-  list<vector<byte>> m_write_msgs;
+  forward_list<vector<byte>> m_write_msgs;
   single_consumer_async_auto_reset_event m_event;
 };
 
