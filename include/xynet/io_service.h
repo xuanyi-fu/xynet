@@ -12,6 +12,7 @@
 #include <atomic>
 
 #include "xynet/async_operation_base.h"
+#include "xynet/detail/timeout_storage.h"
 
 namespace xynet
 {
@@ -33,17 +34,49 @@ public:
 
   void run() noexcept;
 
+  class run_after_operation : public async_operation_base
+  {
+  public:
+    template<typename Duration>
+    run_after_operation(io_service* service, Duration&& duration)
+    :async_operation_base{service}
+    ,m_timeout{std::forward<Duration>(duration)}
+    {}
+
+    bool await_ready() noexcept
+    {
+      return m_timeout.is_zero_timeout();
+    }
+
+    void await_suspend(std::coroutine_handle<> awaiting_coroutine) noexcept
+    {
+      set_awaiting_coroutine(awaiting_coroutine);
+      get_service()->try_submit_io([this](::io_uring_sqe* sqe)
+      {
+        ::io_uring_prep_timeout(sqe, m_timeout.get_timespec_ptr(), 0, 0);
+        sqe->user_data = reinterpret_cast<uintptr_t>(this);
+      });
+    }
+
+    void await_resume() noexcept{return;}
+
+  private:
+    detail::timeout_storage<true> m_timeout;
+  };
+
 //  [[nodiscard]]
 //  io_service_schedule_operation schedule() noexcept
 //  {
 //    return io_service_schedule_operation{*this};
 //  }
 //
-//  [[nodiscard]]
-//  io_service_run_after_operation run_after(auto duration) noexcept
-//  {
-//    return io_service_run_after_operation{*this, duration};
-//  }
+  
+  template<typename Duration>
+  [[nodiscard]]
+  decltype(auto) run_after(Duration&& duration) noexcept
+  {
+    return run_after_operation{this, std::forward<Duration>(duration)};
+  }
 
   void schedule_impl(operation_base_ptr) noexcept;
   void schedule_local(operation_base_list&) noexcept;
