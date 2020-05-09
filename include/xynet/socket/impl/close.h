@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <array>
 #include "xynet/buffer.h"
-#include "xynet/socket/detail/async_operation.h"
+#include "xynet/detail/async_operation.h"
 #include "xynet/detail/file_descriptor_traits.h"
 
 namespace xynet

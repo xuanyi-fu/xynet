@@ -79,6 +79,18 @@ public:
                                 )));
   };
 
+  auto get_iov_ptr() -> ::iovec*
+  {
+    return m_iterator == std::ranges::end(m_sequence.m_val) 
+    ? nullptr : static_cast<::iovec*>(std::addressof(*m_iterator));
+  }
+
+  auto get_iov_cnt() -> iov_len_t
+  {
+    return m_iterator == std::ranges::end(m_sequence.m_val) 
+    ? 0 : static_cast<iov_len_t>(std::distance(m_iterator, std::ranges::end(m_sequence.m_val)));
+  }
+
   auto commit(iov_len_t len) -> void
   {
     while(len > 0 && m_iterator != std::ranges::end(m_sequence.m_val))

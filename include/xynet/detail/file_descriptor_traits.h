@@ -6,6 +6,7 @@
 #define XYNET_FILE_DESCRIPTOR_TRAITS_H
 
 #include <experimental/type_traits>
+#include <tuple>
 
 namespace xynet::detail
 {

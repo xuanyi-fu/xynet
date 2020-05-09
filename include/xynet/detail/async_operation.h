@@ -5,10 +5,9 @@
 #ifndef XYNET_SOCKET_ASYNC_OPERATION_H
 #define XYNET_SOCKET_ASYNC_OPERATION_H
 
-
-
 #include <chrono>
 #include "xynet/detail/timeout_storage.h"
+#include "xynet/detail/file_descriptor_traits.h"
 #include "xynet/async_operation_base.h"
 #include "xynet/io_service.h"
 

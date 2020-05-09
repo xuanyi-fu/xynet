@@ -5,7 +5,7 @@
 #ifndef XYNET_SOCKET_CONNECT_H
 #define XYNET_SOCKET_CONNECT_H
 
-#include "xynet/socket/detail/async_operation.h"
+#include "xynet/detail/async_operation.h"
 
 namespace xynet
 {

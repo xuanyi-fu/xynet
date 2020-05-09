@@ -6,7 +6,7 @@
 #define XYNET_SOCKET_SETSOCKOPT_H
 
 #include "xynet/detail/file_descriptor_traits.h"
-#include "xynet/socket/detail/throw_or_return.h"
+#include "xynet/detail/throw_or_return.h"
 
 namespace xynet
 {

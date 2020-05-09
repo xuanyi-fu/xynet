@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 
+#include "xynet/file/file.h"
 #include "xynet/socket/socket.h"
 #include "xynet/io_service.h"
 
@@ -17,12 +18,29 @@
 
 using namespace xynet;
 
-using socket_exception_t = xynet::socket_t;
-
-auto timeout(io_service& service) -> task<>
+auto test(io_service& service) -> task<>
 {
-  co_await service.run_after(std::chrono::seconds{5});
-  std::cout<<"wtf\n";
+  auto f = file_t{};
+  auto listen_socket = socket_t{};
+  auto s = socket_t{};
+  try
+  {
+    listen_socket.init();
+    listen_socket.bind(socket_address{25565});
+    listen_socket.reuse_address();
+    listen_socket.listen();
+    co_await listen_socket.accept(s);
+
+    co_await f.openat("/home/xuanyi/1.txt", O_RDONLY, 0u);
+    co_await f.update_statx();
+
+    // co_await s.splice(f, 0, f.file_size());
+
+  }catch(const std::exception& ex)
+  {
+    std::puts(ex.what());
+  }
+
   service.request_stop();
 }
 
@@ -35,6 +53,6 @@ auto run_service(io_service& service) -> task<>
 int main()
 {
   auto service = io_service{};
-  auto t = when_all(timeout(service), run_service(service));
+  auto t = when_all(test(service), run_service(service));
   sync_wait(t);
 }

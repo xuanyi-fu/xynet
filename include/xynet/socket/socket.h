@@ -20,6 +20,7 @@
 #include "xynet/socket/impl/send_all.h"
 #include "xynet/socket/impl/recv_all.h"
 #include "xynet/socket/impl/close.h"
+#include "xynet/socket/impl/splice.h"
 
 namespace xynet
 {
@@ -39,6 +40,7 @@ using socket_t = file_descriptor<
         operation_connect,
         operation_send,
         operation_recv,
+        operation_splice,
         operation_close
       >
     , with<exception_policy>::template map_front

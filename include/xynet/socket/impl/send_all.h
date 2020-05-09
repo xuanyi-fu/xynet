@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <cstdio>
 #include "xynet/buffer.h"
-#include "xynet/socket/detail/async_operation.h"
+#include "xynet/detail/async_operation.h"
 #include "xynet/detail/file_descriptor_traits.h"
 
 namespace xynet
@@ -81,7 +81,8 @@ struct operation_send
 
     void update_result()
     {
-      if(!async_operation_base::no_error_in_result())
+      if(!async_operation_base::no_error_in_result() || 
+      async_operation_base::get_res() == 0)
       {
         async_operation_base::get_awaiting_coroutine().resume();
       }

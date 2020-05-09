@@ -9,7 +9,7 @@
 #include <system_error>
 
 #include "socket_address.h"
-#include "xynet/socket/detail/throw_or_return.h"
+#include "xynet/detail/throw_or_return.h"
 #include "xynet/file_descriptor.h"
 #include "xynet/detail/file_descriptor_traits.h"
 
