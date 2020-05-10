@@ -32,6 +32,13 @@ public:
   }
 
   [[nodiscard]]
+  auto data_string_view() const noexcept
+  {
+    return std::string_view{gptr(), 
+      static_cast<std::size_t>(pptr() - gptr())};
+  }
+
+  [[nodiscard]]
   auto prepare(std::size_t n)
   {
     reserve(n);
