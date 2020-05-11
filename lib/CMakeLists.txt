@@ -1,8 +1,10 @@
 find_package(g3logger CONFIG REQUIRED)
 find_package(liburing REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 list(APPEND LIBS g3logger)
 list(APPEND LIBS liburing::liburing)
+list(APPEND LIBS OpenSSL::Crypto)
 
 add_library(xynet io_service.cpp)
 target_include_directories(xynet PUBLIC ${PROJECT_SOURCE_DIR}/include)
