@@ -48,10 +48,43 @@ TEST_CASE("websocket frame header test")
     flags |= websocket_flags::WS_HAS_MASK;
   }
 
+  SUBCASE("multi-flags, length < 126")
+  {
+    flags |= websocket_flags::WS_FIN;
+    flags |= websocket_flags::WS_HAS_MASK;
+    flags |= websocket_flags::WS_OP_PING;
+    length = 120;
+  }
+
   auto header = websocket_frame_header{flags, length};
   auto parser = websocket_frame_header_parser{};
   auto ret = parser.parse(header.span());
   CHECK_EQ(ret, header.span().size());
   CHECK_EQ(flags, parser.flags());
   CHECK_EQ(length, parser.length());
+}
+
+TEST_CASE("websocket frame header test2")
+{
+  auto flags  = websocket_flags::WS_NONE;
+  flags |= websocket_flags::WS_FIN;
+  flags |= websocket_flags::WS_HAS_MASK;
+  flags |= websocket_flags::WS_OP_PING;
+  auto length = size_t{120};
+
+  auto header = websocket_frame_header{flags, length};
+  auto header_length = header.span().size();
+
+  for(auto span1_length = size_t{}; span1_length < header_length; ++span1_length)
+  {
+    auto span1 = std::span{header.span().data(), span1_length};
+    auto span2 = std::span{header.span().data() + span1_length, header_length - span1_length};
+
+    auto parser = websocket_frame_header_parser{};
+    auto ret1 = parser.parse(span1);
+    CHECK_EQ(ret1, websocket_frame_header_parser::npos);
+    auto ret2 = parser.parse(span2);
+    CHECK_EQ(flags, parser.flags());
+    CHECK_EQ(length, parser.length());
+  }  
 }

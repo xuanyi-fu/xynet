@@ -3,12 +3,12 @@
 //
 #include "doctest/doctest.h"
 #include "xynet/buffer.h"
-#include "xynet/http/websocket_frame_header.h"
 
 using namespace std;
 using namespace xynet;
 
-TEST_CASE("construct a buffer with one array")
+
+TEST_CASE("buffer sequence test")
 {
 
 }

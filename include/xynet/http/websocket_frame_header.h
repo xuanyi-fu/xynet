@@ -227,6 +227,8 @@ class websocket_frame_header_parser
 {
 public:
 
+  constexpr static const size_t npos = -1;
+
   decltype(auto) parse(std::string_view str) noexcept
   {
     return parse(reinterpret_cast<const unsigned char*>(str.data()), str.size());
@@ -273,9 +275,6 @@ public:
     m_require = 0;
   }
 
-
-
-
 private:
 
   enum class parser_state : uint32_t
@@ -289,13 +288,13 @@ private:
 
   size_t parse(const unsigned char* data, size_t len) noexcept;
 
-  parser_state m_state = parser_state::s_start;
-  websocket_flags m_flags = websocket_flags::WS_NONE;
+  parser_state m_state       = parser_state::s_start;
+  websocket_flags m_flags    = websocket_flags::WS_NONE;
 
   std::array<char, 4> m_mask = {};
 
-  size_t   m_length  = 0;
-  size_t   m_require = 0;
+  size_t   m_length          = 0;
+  size_t   m_require         = 0;
 };
 
 size_t websocket_frame_header_parser::parse(const unsigned char *data, size_t len) noexcept
@@ -377,7 +376,7 @@ size_t websocket_frame_header_parser::parse(const unsigned char *data, size_t le
   }
 
   // incomplete
-  return -1;
+  return npos;
 }// class websocket_frame_header_parser
 
 }// namespace xynet
