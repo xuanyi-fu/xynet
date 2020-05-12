@@ -105,8 +105,6 @@ constexpr websocket_flags& operator^=(websocket_flags& lhs, websocket_flags rhs)
   return lhs;
 }
 
-
-
 namespace detail
 {
 
@@ -229,13 +227,13 @@ class websocket_frame_header_parser
 {
 public:
 
-  decltype(auto) parse(std::string_view str)
+  decltype(auto) parse(std::string_view str) noexcept
   {
     return parse(reinterpret_cast<const unsigned char*>(str.data()), str.size());
   }
 
   template<typename T, std::size_t Extent>
-  decltype(auto) parse(std::span<T, Extent> sp)
+  decltype(auto) parse(std::span<T, Extent> sp) noexcept
   {
     if constexpr (std::is_same_v<std::remove_const_t<T>, char>)
     {
@@ -243,10 +241,39 @@ public:
     }
 
     auto byte_span = std::as_bytes(sp);
-    return parse(reinterpret_cast<const char*>(byte_span.data()), byte_span.size());
+    return parse(reinterpret_cast<const unsigned char*>(byte_span.data()), byte_span.size());
   }
 
-  
+  auto length() const noexcept
+  {
+    return m_length;
+  }
+
+  auto flags() const noexcept
+  {
+    return m_flags;
+  }
+
+  uint32_t mask_uint32_t() const noexcept
+  {
+    return *reinterpret_cast<const int*>(m_mask.data());
+  }
+
+  auto mask() const noexcept
+  {
+    return m_mask;
+  }
+
+  void reset() noexcept
+  {
+    m_state   = parser_state::s_start;
+    m_flags   = websocket_flags::WS_NONE;
+    m_mask    = {};
+    m_length  = 0;
+    m_require = 0;
+  }
+
+
 
 
 private:
@@ -260,7 +287,7 @@ private:
     s_finished
   };
 
-  size_t parse(const unsigned char* data, size_t len);
+  size_t parse(const unsigned char* data, size_t len) noexcept;
 
   parser_state m_state = parser_state::s_start;
   websocket_flags m_flags = websocket_flags::WS_NONE;
@@ -271,7 +298,7 @@ private:
   size_t   m_require = 0;
 };
 
-size_t websocket_frame_header_parser::parse(const unsigned char *data, size_t len)
+size_t websocket_frame_header_parser::parse(const unsigned char *data, size_t len) noexcept
 {
   const unsigned char * p;
   const unsigned char * end = data + len;
