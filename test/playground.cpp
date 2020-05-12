@@ -59,10 +59,3 @@ int main()
   auto t = when_all(test(service), run_service(service));
   sync_wait(t);
 }
-
-
-// #include "xynet/http/websocket_request_handler.h"
-
-// using namespace std;
-// using namespace xynet;
-// using namespace std::literals;
