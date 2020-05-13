@@ -62,7 +62,6 @@ public:
 private:
   int parse(const char* buf, size_t len)
   {
-    m_headers_num = 10;
     int ret = phr_parse_request(buf, len,
       &mp_method, &m_method_len,
       &mp_path, &m_path_len,
@@ -81,8 +80,8 @@ private:
 
   int m_version = 0;
 
-  std::array<::phr_header, 10> m_headers = {};
-  size_t m_headers_num = 10;
+  std::array<::phr_header, 100> m_headers = {};
+  size_t m_headers_num = 100;
 
   size_t last_len = 0;
 

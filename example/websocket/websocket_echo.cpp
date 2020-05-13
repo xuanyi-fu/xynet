@@ -4,7 +4,7 @@
 using namespace std;
 using namespace xynet;
 
-inline constexpr static const uint16_t DISCARD_PORT = 2009;
+inline constexpr static const uint16_t ECHO_PORT = 2007;
 
 auto disconnect(socket_t peer_socket) -> task<>
 {
@@ -15,14 +15,17 @@ auto disconnect(socket_t peer_socket) -> task<>
   }catch(...){}
 }
 
-auto discard_once(socket_t& peer_socket, 
+auto echo_once(socket_t& peer_socket, 
   std::array<byte, MAX_WEBSOCKET_FRAME_SIZE>& buf) -> task<>
 {
   auto data_span = co_await websocket_recv_data(peer_socket, buf);
+  auto header = websocket_frame_header{websocket_flags::WS_FINAL_FRAME 
+    | websocket_flags::WS_OP_TEXT, data_span.size()};
+  auto sent_bytes = co_await peer_socket.send(header.span(), data_span);
   co_return;
 }
 
-auto websocket_discard(socket_t peer_socket) -> task<>
+auto websocket_echo(socket_t peer_socket) -> task<>
 {
   try
   {
@@ -30,9 +33,9 @@ auto websocket_discard(socket_t peer_socket) -> task<>
     array<byte, MAX_WEBSOCKET_FRAME_SIZE> buf{};
     while(true)
     {
-      // this line must be added here to avoid the gcc compiler bug.
+      // this line must be added here to avoid some gcc compiler bug.
       auto i = 0;
-      co_await discard_once(peer_socket, buf);
+      co_await echo_once(peer_socket, buf);
     }
     
   }catch(const std::exception ex)
@@ -47,7 +50,7 @@ auto websocket_discard(socket_t peer_socket) -> task<>
 int main()
 {
   auto service = io_service{};
-  sync_wait(start_server(websocket_discard, service, DISCARD_PORT));
+  sync_wait(start_server(websocket_echo, service, ECHO_PORT));
 }
 
 

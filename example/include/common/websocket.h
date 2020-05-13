@@ -47,9 +47,8 @@ auto websocket_handshake(socket_t& peer_socket) -> task<>
   {
     recv_bytes += co_await peer_socket.recv_some
       (std::span{buf.data() + recv_bytes, buf.size() - recv_bytes});
-    
-    if(ret = parser.parse(std::span{buf.data(), recv_bytes});
-        ret == -1)
+    auto ret = parser.parse(std::span{buf.data(), recv_bytes});
+    if(ret == -1)
     {
       continue;
     }
@@ -66,7 +65,6 @@ auto websocket_handshake(socket_t& peer_socket) -> task<>
     throw http_bad_request_exception{};
   }
 
-  co_return;
 }
 
 auto websocket_send_close(socket_t& peer_socket, uint16_t status_code) -> task<>
@@ -131,6 +129,7 @@ auto websocket_recv_data(socket_t& peer_socket, auto& buf)
       co_await websocket_check_parser_result(peer_socket, parser);
       auto data_span = std::span{buf.data() + ret, length};
       websocket_mask(data_span, mask, 0);
+      co_return data_span;
     }
   }
 }
