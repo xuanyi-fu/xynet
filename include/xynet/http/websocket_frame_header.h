@@ -261,6 +261,11 @@ public:
     return *reinterpret_cast<const int*>(m_mask.data());
   }
 
+  auto result() const noexcept
+  {
+    return std::make_tuple(flags(), mask_uint32_t(), length());
+  }
+
   auto mask() const noexcept
   {
     return m_mask;

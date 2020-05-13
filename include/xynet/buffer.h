@@ -16,7 +16,7 @@
 namespace xynet
 {
 
-namespace
+namespace detail
 {
 
 template<std::size_t Extent>
@@ -114,7 +114,10 @@ private:
   typename buffer_sequence_storage<Extent>::iterator m_iterator;
 };
 
-}
+} // namespace detail
+
+using xynet::detail::buffer_sequence_base;
+using xynet::detail::buffer_sequence_storage;
 
 // dummy template parameter for deduction guide to work with default template parameter
 template<typename, std::size_t Extent = std::dynamic_extent>
