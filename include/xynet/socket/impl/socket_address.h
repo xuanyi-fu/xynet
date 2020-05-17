@@ -81,11 +81,11 @@ UnsignedInt network_to_host(UnsignedInt net [[maybe_unused]]) {
                 "host must be uint32_t or uint16_t");
 }
 
-template<>
-uint64_t host_to_network<uint64_t>(uint64_t host)
-{
-  return ::htobe64(host);
-}
+// template<>
+// uint64_t host_to_network<uint64_t>(uint64_t host)
+// {
+//   return ::htobe64(host);
+// }
 
 template <> uint32_t host_to_network<uint32_t>(uint32_t host) {
   return ::htonl(host);
@@ -95,15 +95,15 @@ template <> uint16_t host_to_network<uint16_t>(uint16_t host) {
   return ::htons(host);
 }
 
-template<>
-uint64_t network_to_host<uint64_t>(uint64_t net)
-{
-  return ::be64toh(net);
-}
+// template<>
+// uint64_t network_to_host<uint64_t>(uint64_t net)
+// {
+//   return ::be64toh(net);
+// }
 
-template <> uint32_t network_to_host<uint32_t>(uint32_t net) {
-  return ::ntohl(net);
-}
+// template <> uint32_t network_to_host<uint32_t>(uint32_t net) {
+//   return ::ntohl(net);
+// }
 
 template <> uint16_t network_to_host<uint16_t>(uint16_t net) {
   return ::ntohs(net);

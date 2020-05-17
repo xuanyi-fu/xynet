@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <ranges>
+#include <span>
 
 
 #include "xynet/file/file.h"

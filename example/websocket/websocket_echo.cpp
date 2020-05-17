@@ -21,6 +21,7 @@ auto echo_once(socket_t& peer_socket,
   auto data_span = co_await websocket_recv_data(peer_socket, buf);
   auto header = websocket_frame_header{websocket_flags::WS_FINAL_FRAME 
     | websocket_flags::WS_OP_TEXT, data_span.size()};
+  [[maybe_unused]]
   auto sent_bytes = co_await peer_socket.send(header.span(), data_span);
   co_return;
 }
@@ -34,11 +35,12 @@ auto websocket_echo(socket_t peer_socket) -> task<>
     while(true)
     {
       // this line must be added here to avoid some gcc compiler bug.
+      [[maybe_unused]]
       auto i = 0;
       co_await echo_once(peer_socket, buf);
     }
     
-  }catch(const std::exception ex)
+  }catch(const std::exception& ex)
   {
     std::cout<<ex.what();
   }

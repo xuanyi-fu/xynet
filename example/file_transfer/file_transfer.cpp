@@ -21,6 +21,7 @@ auto file_transfer(socket_t peer_socket, std::string_view path) -> task<>
     co_await file.update_statx();
     auto buffer = vector<byte>(file.file_size());
     co_await file.read_some(buffer);
+    [[maybe_unused]]
     auto sent_bytes = co_await peer_socket.send(buffer);
   }catch(const exception& ex)
   {

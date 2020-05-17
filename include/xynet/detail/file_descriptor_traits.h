@@ -7,6 +7,7 @@
 
 #include <experimental/type_traits>
 #include <tuple>
+#include <system_error>
 
 namespace xynet::detail
 {

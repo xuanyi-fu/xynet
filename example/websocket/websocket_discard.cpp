@@ -35,7 +35,7 @@ auto websocket_discard(socket_t peer_socket) -> task<>
       co_await discard_once(peer_socket, buf);
     }
     
-  }catch(const std::exception ex)
+  }catch(const std::exception& ex)
   {
     std::cout<<ex.what();
   }

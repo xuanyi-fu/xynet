@@ -31,6 +31,7 @@ auto time_client(const socket_address& address, io_service& service) -> task<>
     co_await s.connect_timeout(address, std::chrono::seconds{1});
     time_t t{};
     auto buf = span{&t, sizeof(t)};
+    [[maybe_unused]]
     auto recv_bytes = co_await s.recv(buf);
 
     auto tm_now = ::tm{};
@@ -56,7 +57,6 @@ auto time_client(const socket_address& address, io_service& service) -> task<>
 
 int main(int argc, char** argv)
 {
-  bool b = string{argv[1]} == "-l"s;
   // server
   if((argc == 2) && string{argv[1]} == "-l"s)
   {

@@ -226,8 +226,23 @@ private:
   stop_source m_stop_source;
 };
 
-int main()
+int main(int argc, char** argv)
 {
+  if(argc != 2)
+  {
+    puts("usage: websocket_chat [port]");
+  }
+
+  auto port = uint16_t{};
+
+  try
+  {
+    port = stoi(string{argv[1]});
+  }catch(...)
+  {
+    return 0;
+  }
+  
   auto service = io_service{};
   auto room = chat_room{};
   sync_wait(start_server([&room](socket_t peer_socket) -> task<>
@@ -244,7 +259,7 @@ int main()
       peer_socket.shutdown();
       co_await peer_socket.close();
     }catch(...){}
-  }, service, 25565));
+  }, service, port));
 }
 
 

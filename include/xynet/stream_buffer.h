@@ -71,7 +71,7 @@ protected:
 
   void reserve(std::size_t n)
   {
-    if(n == 0 || epptr() - pptr() >= n)
+    if(n == 0 || static_cast<std::size_t>(epptr() - pptr()) >= n)
     {
       return;
     }
@@ -90,7 +90,7 @@ protected:
         pptr_pos);
     }
 
-    if(n > epptr_pos - pptr_pos)
+    if(n > static_cast<std::size_t>(epptr_pos - pptr_pos))
     {
       epptr_pos = pptr_pos + n;
       m_buffer.resize(epptr_pos);

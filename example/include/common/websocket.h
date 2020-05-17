@@ -119,7 +119,7 @@ auto websocket_recv_data(socket_t& peer_socket, auto& buf)
       (std::span{buf.data() + recv_bytes, buf.size() - recv_bytes});
     
     if(auto ret = parser.parse(std::span{buf.data(), recv_bytes});
-        ret == -1)
+        ret == UINT32_MAX)
     {
       continue;
     }
