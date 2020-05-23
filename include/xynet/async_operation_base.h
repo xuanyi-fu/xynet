@@ -63,16 +63,16 @@ public:
     base->m_awaiting_coroutine.resume();
   }
 
+  void set_callback(callback_t callback) noexcept
+  {
+    m_callback = callback;
+  }
+
 protected:
 
   void set_error_ptr(std::error_code* error)
   {
     mp_error = error;
-  }
-
-  void set_callback(callback_t callback) noexcept
-  {
-    m_callback = callback;
   }
 
   auto get_awaiting_coroutine() noexcept

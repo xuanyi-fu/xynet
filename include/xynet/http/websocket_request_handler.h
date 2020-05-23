@@ -101,7 +101,7 @@ public:
     // and fill it into the response
     base64_encode(
       m_websocket_handshake_response.data() 
-    + websocket_handshake_response_model_accept_key_pos(),
+    + detail::websocket_handshake_response_model_accept_key_pos(),
       sha1_digest.data(), 
       sha1_digest.size());
 
@@ -126,8 +126,8 @@ public:
   {
     return std::span<const std::byte, std::dynamic_extent>
     (
-      reinterpret_cast<const std::byte*>(websocket_handshake_response_bad_request.data()), 
-      websocket_handshake_response_bad_request.size()
+      reinterpret_cast<const std::byte*>(detail::websocket_handshake_response_bad_request.data()), 
+      detail::websocket_handshake_response_bad_request.size()
     );
   }
 
@@ -212,41 +212,42 @@ private:
   
   static int base64_encode(char* encoded, const char* string, int len)
   {
-      int i;
-      char *p;
+    using xynet::detail::basis_64;
+    int i;
+    char *p;
 
-      p = encoded;
-      for (i = 0; i < len - 2; i += 3) {
-      *p++ = basis_64[(string[i] >> 2) & 0x3F];
-      *p++ = basis_64[((string[i] & 0x3) << 4) |
-                      ((int) (string[i + 1] & 0xF0) >> 4)];
-      *p++ = basis_64[((string[i + 1] & 0xF) << 2) |
-                      ((int) (string[i + 2] & 0xC0) >> 6)];
-      *p++ = basis_64[string[i + 2] & 0x3F];
-      }
-      if (i < len) {
-      *p++ = basis_64[(string[i] >> 2) & 0x3F];
-      if (i == (len - 1)) {
-          *p++ = basis_64[((string[i] & 0x3) << 4)];
-          *p++ = '=';
-      }
-      else {
-          *p++ = basis_64[((string[i] & 0x3) << 4) |
-                          ((int) (string[i + 1] & 0xF0) >> 4)];
-          *p++ = basis_64[((string[i + 1] & 0xF) << 2)];
-      }
-      *p++ = '=';
-      }
+    p = encoded;
+    for (i = 0; i < len - 2; i += 3) {
+    *p++ = basis_64[(string[i] >> 2) & 0x3F];
+    *p++ = basis_64[((string[i] & 0x3) << 4) |
+                    ((int) (string[i + 1] & 0xF0) >> 4)];
+    *p++ = basis_64[((string[i + 1] & 0xF) << 2) |
+                    ((int) (string[i + 2] & 0xC0) >> 6)];
+    *p++ = basis_64[string[i + 2] & 0x3F];
+    }
+    if (i < len) {
+    *p++ = basis_64[(string[i] >> 2) & 0x3F];
+    if (i == (len - 1)) {
+        *p++ = basis_64[((string[i] & 0x3) << 4)];
+        *p++ = '=';
+    }
+    else {
+        *p++ = basis_64[((string[i] & 0x3) << 4) |
+                        ((int) (string[i + 1] & 0xF0) >> 4)];
+        *p++ = basis_64[((string[i + 1] & 0xF) << 2)];
+    }
+    *p++ = '=';
+    }
 
-      //*p++ = '\0';
-      return p++ - encoded;
+    //*p++ = '\0';
+    return p++ - encoded;
   }
 
-  std::array<char, websocket_handshake_response_model_len()> m_websocket_handshake_response
-   = websocket_handshake_response_model_array();
+  std::array<char, detail::websocket_handshake_response_model_len()> m_websocket_handshake_response
+   = detail::websocket_handshake_response_model_array();
 
-  mutable std::array<char, websocket_handshake_accept_concat_len()> m_websocket_handshake_accept_concat
-  = websocket_handshake_accept_concat_array();
+  mutable std::array<char, detail::websocket_handshake_accept_concat_len()> m_websocket_handshake_accept_concat
+  = detail::websocket_handshake_accept_concat_array();
 
   http_parser m_parser = http_parser{};
 

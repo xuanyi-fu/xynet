@@ -14,6 +14,7 @@
 #include "xynet/socket/impl/connect.h"
 #include "xynet/socket/impl/recv_all.h"
 #include "xynet/socket/impl/close.h"
+#include "xynet/socket/impl/send_all.h"
 
 #include "xynet/io_service.h"
 
@@ -41,16 +42,11 @@ using socket_t = file_descriptor
     operation_accept,
     operation_connect,
     operation_close,
-    operation_recv
+    operation_recv,
+    operation_send
   >
 >;
 
-inline static auto service = io_service{};
-auto service_spin = [&service](stop_token token)->task<>
-{
-  service.run(token);
-  co_return;
-};
 
 auto close_socket = [](socket_t& socket) -> task<>
 {
@@ -69,94 +65,189 @@ auto port_gen = []
   return dis(gen);
 };
 
-
-TEST_CASE("recv")
+auto connector(auto func, uint16_t port) -> task<>
 {
+  auto s = socket_t{};
+  try
+  {
+    s.init();
+    s.reuse_address();
+    s.bind(socket_address{0});
+    co_await s.connect(socket_address{port});
+    co_await func(std::move(s));
+  }catch(...){}
+}
 
+auto acceptor(auto client,
+              xynet::io_service& service,
+              uint16_t port) 
+-> xynet::task<>
+{
+  auto scope = xynet::async_scope{};
+  auto listen_socket = socket_t{};
+  auto ex = std::exception_ptr{};
+
+  try
+  {
+    listen_socket.init();
+    listen_socket.reuse_address();
+    listen_socket.bind(xynet::socket_address{port});
+    listen_socket.listen();
+    auto peer_socket = socket_t{};
+    co_await listen_socket.accept(peer_socket);
+    scope.spawn(client(std::move(peer_socket)));
+  }
+  catch(...)
+  {
+    ex = std::current_exception();
+  }
+
+  co_await scope.join();
+  service.request_stop();
+
+  if(ex)
+  {
+    std::rethrow_exception(ex);
+  }
+
+  co_return;
+}
+
+auto service_start(io_service& service, stop_token token) -> task<>
+{
+  service.run(token);
+  co_return;
+}
+
+
+TEST_CASE("send / recv")
+{
+  auto service = io_service{};
+  
+
+  SUBCASE("recv/send 0 byte")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    auto client = [](socket_t s) -> task<>
+    {
+      int i = 0;
+      REQUIRE_NOTHROW(co_await s.send(std::span{&i, 0}));
+      s.shutdown();
+    };
+
+    auto server = [](socket_t s) -> task<>
+    {
+      int i = 0;
+      REQUIRE_THROWS_WITH(co_await s.recv(std::span{&i, 0}), "connection read eof.");
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
 }
 
 TEST_CASE("accept / connect")
 {
-    auto connect_socket = socket_t{};
-    connect_socket.init();
-    connect_socket.reuse_address();
-    REQUIRE_NOTHROW(connect_socket.bind(socket_address{0}));
-    CHECK(connect_socket.get() >= 0);
+  auto service = io_service{};
+  auto connect_socket = socket_t{};
+  connect_socket.init();
+  connect_socket.reuse_address();
+  REQUIRE_NOTHROW(connect_socket.bind(socket_address{0}));
+  CHECK(connect_socket.get() >= 0);
 
-    auto listen_socket = socket_t{};
-    listen_socket.init();
-    listen_socket.reuse_address();
+  auto listen_socket = socket_t{};
+  listen_socket.init();
+  listen_socket.reuse_address();
 
-    auto PORT = uint16_t{};
-    auto error = std::error_code{};
+  auto PORT = uint16_t{};
+  auto error = std::error_code{};
+
+  auto service_spin = [&service](stop_token token)->task<>
+  {
+    service.run(token);
+    co_return;
+  };
+  
+  do
+  {
+    PORT = port_gen();
+    listen_socket.bind(socket_address{PORT}, error);
+  }while(error == make_error_condition(errc::address_in_use));
+  
+  REQUIRE_NOTHROW(listen_socket.listen());
+  CHECK(connect_socket.get() >= 0);
+
+  auto peer_socket = socket_t{};
+  auto source = stop_source{};
+
+  SUBCASE("exception")
+  {
+    auto accept_once = [&]() -> task<>
+    {
+      REQUIRE_NOTHROW(co_await listen_socket.accept(peer_socket));
+      co_return;
+    };
+
+    auto connect_once = [&]() -> task<>
+    {
+      REQUIRE_NOTHROW(co_await connect_socket.connect(socket_address{"127.0.0.1", PORT}));
+      co_return;
+    };
+
+    auto accpet_connect = [&]() -> task<>
+    {
+      co_await when_all(accept_once(), connect_once());
+      source.request_stop();
+    };
     
-    do
+    sync_wait(when_all(
+      accpet_connect(),
+      service_spin(source.get_token())
+    ));
+  }
+
+  SUBCASE("error_code")
+  {
+    auto accept_once = [&]() -> task<>
     {
-      PORT = port_gen();
-      listen_socket.bind(socket_address{PORT}, error);
-    }while(error == make_error_condition(errc::address_in_use));
-    
-    REQUIRE_NOTHROW(listen_socket.listen());
-    CHECK(connect_socket.get() >= 0);
+      auto error = std::error_code{};
+      co_await listen_socket.accept(peer_socket, error);
+      CHECK(!error);
+      co_return;
+    };
 
-    auto peer_socket = socket_t{};
-    auto source = stop_source{};
-
-    SUBCASE("exception")
+    auto connect_once = [&]() -> task<>
     {
-      auto accept_once = [&]() -> task<>
-      {
-        REQUIRE_NOTHROW(co_await listen_socket.accept(peer_socket));
-        co_return;
-      };
+      auto error = std::error_code{};
+      co_await connect_socket.connect(socket_address{"127.0.0.1", PORT}, error);
+      CHECK(!error);
+      co_return;
+    };
 
-      auto connect_once = [&]() -> task<>
-      {
-        REQUIRE_NOTHROW(co_await connect_socket.connect(socket_address{"127.0.0.1", PORT}));
-        co_return;
-      };
-
-      auto accpet_connect = [&]() -> task<>
-      {
-        co_await when_all(accept_once(), connect_once());
-        source.request_stop();
-      };
-      
-      sync_wait(when_all(
-        accpet_connect(),
-        service_spin(source.get_token())
-      ));
-    }
-
-    SUBCASE("error_code")
+    auto accpet_connect = [&]() -> task<>
     {
-      auto accept_once = [&]() -> task<>
-      {
-        auto error = std::error_code{};
-        co_await listen_socket.accept(peer_socket, error);
-        CHECK(!error);
-        co_return;
-      };
+      co_await when_all(accept_once(), connect_once());
+      source.request_stop();
+    };
 
-      auto connect_once = [&]() -> task<>
-      {
-        auto error = std::error_code{};
-        co_await connect_socket.connect(socket_address{"127.0.0.1", PORT}, error);
-        CHECK(!error);
-        co_return;
-      };
-
-      auto accpet_connect = [&]() -> task<>
-      {
-        co_await when_all(accept_once(), connect_once());
-        source.request_stop();
-      };
-
-      sync_wait(when_all(
-        accpet_connect(),
-        service_spin(source.get_token())
-      ));
-    }
+    sync_wait(when_all(
+      accpet_connect(),
+      service_spin(source.get_token())
+    ));
+  }
 
   SUBCASE("timeout")
   {

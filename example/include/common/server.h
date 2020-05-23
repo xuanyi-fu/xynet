@@ -8,8 +8,6 @@
 #include "xynet/coroutine/sync_wait.h"
 #include "xynet/coroutine/async_scope.h"
 
-#include <iostream>
-
 auto acceptor(auto client,
               xynet::io_service& service,
               uint16_t port) 

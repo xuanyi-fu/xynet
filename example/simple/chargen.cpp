@@ -36,6 +36,7 @@ auto discard(socket_t& peer_socket) -> task<>
   {
     for(;;)
     {
+      [[maybe_unused]]
       auto read_bytes = 
       co_await peer_socket.recv_some(get_null_buffer_span());
     }
@@ -49,6 +50,7 @@ auto writer(socket_t& peer_socket) -> task<>
   {
     for(;;)
     {
+      [[maybe_unused]]
       auto sent_bytes = co_await peer_socket.send(chargen_buffer.m_span);
     }
   }catch(...){}

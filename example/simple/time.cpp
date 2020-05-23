@@ -28,7 +28,7 @@ auto time_client(const socket_address& address, io_service& service) -> task<>
   try
   {
     s.init();
-    co_await s.connect_timeout(address, std::chrono::seconds{1});
+    co_await s.connect(address, std::chrono::seconds{1});
     time_t t{};
     auto buf = span{&t, sizeof(t)};
     [[maybe_unused]]

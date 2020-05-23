@@ -5,7 +5,7 @@
 #ifndef XYNET_SOCKET_BIND_H
 #define XYNET_SOCKET_BIND_H
 
-#include "xynet/detail/file_descriptor_traits.h"
+#include "xynet/file_descriptor.h"
 #include "xynet/socket/impl/address.h"
 #include "xynet/detail/sync_operation.h"
 

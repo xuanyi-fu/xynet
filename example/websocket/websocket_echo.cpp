@@ -42,7 +42,7 @@ auto websocket_echo(socket_t peer_socket) -> task<>
     
   }catch(const std::exception& ex)
   {
-    std::cout<<ex.what();
+    printf("%s\n", ex.what());
   }
 
   co_await disconnect(std::move(peer_socket));

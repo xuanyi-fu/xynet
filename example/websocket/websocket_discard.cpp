@@ -31,13 +31,13 @@ auto websocket_discard(socket_t peer_socket) -> task<>
     while(true)
     {
       // this line must be added here to avoid the gcc compiler bug.
-      auto i = 0;
+      [[maybe_unused]]auto i = 0;
       co_await discard_once(peer_socket, buf);
     }
     
   }catch(const std::exception& ex)
   {
-    std::cout<<ex.what();
+    printf("%s\n", ex.what());
   }
 
   co_await disconnect(std::move(peer_socket));

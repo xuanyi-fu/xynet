@@ -36,6 +36,7 @@ public:
       co_await s.connect(m_address);    
       while(!token.stop_requested())
       {
+        [[maybe_unused]]
         auto send_bytes = co_await s.send(buffer);
         auto read_bytes = co_await s.recv(buffer);
         total_bytes_read += read_bytes;
@@ -80,7 +81,7 @@ public:
 
   auto timer(const stop_source& source) -> task<>
   {
-    co_await m_service.run_after(m_config.timeout);
+    co_await m_service.schedule(m_config.timeout);
     source.request_stop();
   }
 private:

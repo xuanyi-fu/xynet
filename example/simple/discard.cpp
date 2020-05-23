@@ -20,6 +20,7 @@ auto discard(socket_t peer_socket) -> task<>
   {
     for(;;)
     {
+      [[maybe_unused]]
       auto read_bytes = 
       co_await peer_socket.recv_some(get_null_buffer_span());
     }

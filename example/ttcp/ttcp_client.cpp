@@ -2,6 +2,7 @@
 #include "ttcp_message.h"
 #include <cstdio>
 #include <chrono>
+#include <memory>
 
 using namespace std;
 using namespace xynet;
@@ -39,12 +40,13 @@ auto ttcp_client(io_service& service,
     }
 
     auto start_time = chrono::system_clock::now();
-    for(int i = 0; i < ::ntohl(message.number); ++i)
+    for(std::size_t i = 0; i < ::ntohl(message.number); ++i)
     {
-      std::printf("sending %d: %lu bytes\n", i, ttcp_payload_bytes);
+      std::printf("sending %lu: %lu bytes\n", i, ttcp_payload_bytes);
       sent_bytes = co_await s.send(span{reinterpret_cast<byte*>(ttcp_payload.get()), ttcp_payload_bytes});
       std::printf("sent %lu\n", sent_bytes);
       auto ack = int32_t{};
+      [[maybe_unused]]
       auto read_bytes = co_await s.recv(span{reinterpret_cast<byte*>(&ack), sizeof(ack)});
       ack = ::ntohl(ack);
       if(ack != message.length)
