@@ -7,7 +7,7 @@
 #include <utility>
 #include <sys/eventfd.h>
 #include <unistd.h>
-#include <g3log/g3log.hpp>
+
 
 namespace xynet
 {
@@ -248,20 +248,13 @@ void io_service::execute_pending_local() noexcept
   // LOG(INFO) << "io_service::execute_pending_local() has executed " << pending_num << "operations.";
 }
 
-void io_service::run() noexcept
+void io_service::run(std::stop_token token) noexcept
 {
   auto* old_io_service = std::exchange(thread_io_service, this);
   scope_guard _{[old_io_service]{std::exchange(thread_io_service, old_io_service);}};
 
-  while(true)
+  while(!token.stop_requested())
   {
-    execute_pending_local();
-
-    if(ma_is_stop_requested.load())
-    {
-      break;
-    }
-
     if(!m_remote_queue_eventfd_poll_sqe_submitted)
     {
       m_remote_queue_eventfd_poll_sqe_submitted =
@@ -273,7 +266,10 @@ void io_service::run() noexcept
 
     get_completion_queue_operation_bases();
     get_remote_queue_operation_bases();
+    execute_pending_local();
   }
+
+  return;
 }
 
 

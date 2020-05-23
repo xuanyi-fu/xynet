@@ -63,8 +63,8 @@ struct file_descriptor_inst_module_list<file_descriptor<detail::module_list<Modu
 template<typename L, template <typename ...> typename R>
 struct module_match : public std::false_type {};
 
-template<typename T1, typename T2, template <typename ...> typename R>
-struct module_match<R<T1, T2>, R> : public std::true_type
+template<typename... T, template <typename ...> typename R>
+struct module_match<R<T...>, R> : public std::true_type
 {};
 
 /* find the instantiated module from an instantiated module list */

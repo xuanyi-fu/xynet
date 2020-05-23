@@ -19,7 +19,8 @@ template <typename T>
 using FileDescriptorPolicyUseErrorCodeDetector = typename T::policy_use_error_code;
 
 template <typename T>
-concept FileDescriptorPolicyUseErrorCode = std::experimental::is_detected_v<FileDescriptorPolicyUseErrorCodeDetector, T>;
+concept FileDescriptorPolicyUseErrorCode 
+  = std::experimental::is_detected_v<FileDescriptorPolicyUseErrorCodeDetector, T>;
 
 template<FileDescriptorPolicy P, typename... Rs>
 struct file_descriptor_operation_return_type;

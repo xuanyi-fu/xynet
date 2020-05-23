@@ -33,6 +33,10 @@ public:
   {
     m_res = res;
     m_flags = flags;
+    if(m_res < 0)
+    {
+      mp_error->assign(-m_res, std::system_category());
+    }
   }
 
   void execute(async_operation_base* op) noexcept
@@ -61,6 +65,11 @@ public:
 
 protected:
 
+  void set_error_ptr(std::error_code* error)
+  {
+    mp_error = error;
+  }
+
   void set_callback(callback_t callback) noexcept
   {
     m_callback = callback;
@@ -86,27 +95,24 @@ protected:
     return get_service() != nullptr && get_res() >= 0;
   }
 
-  auto get_error_code() const noexcept
+  const auto& get_error_code() const noexcept
   {
-    if(mp_service == nullptr)
-    {
-      return xynet_error_instance::make_error_code(xynet_error::no_service);
-    }
-    else if (m_res < 0)
-    {
-      return std::error_code{-m_res, std::system_category()};
-    }
-    else
-    {
-      return std::error_code{};
-    }
+    return *mp_error;
+  }
+
+  auto& get_error_code() noexcept
+  {
+    return *mp_error;
   }
 
 private:
   int m_res = 0;
   int m_flags = 0;
+  std::error_code* mp_error;
+
   io_service* mp_service = nullptr;
   callback_t* m_callback = &async_operation_base::on_operation_completed;
+
   std::coroutine_handle<> m_awaiting_coroutine = nullptr;
 };
 

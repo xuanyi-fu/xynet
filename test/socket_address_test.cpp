@@ -3,9 +3,11 @@
 //
 
 #include "doctest/doctest.h"
-#include "xynet/socket/impl/socket_address.h"
 #include <arpa/inet.h>
 #include <strings.h>
+
+#include "xynet/socket/impl/address.h"
+
 
 using namespace xynet;
 

@@ -6,34 +6,67 @@
 #define XYNET_SOCKET_BIND_H
 
 #include "xynet/detail/file_descriptor_traits.h"
-#include "xynet/detail/throw_or_return.h"
 #include "xynet/socket/impl/address.h"
+#include "xynet/detail/sync_operation.h"
 
 namespace xynet
 {
 
-template<detail::FileDescriptorPolicy P, typename F>
+template<typename F>
 struct operation_bind
 {
   template<typename F2 = F>
-  decltype(auto) bind(const socket_address &socketAddress)
-  noexcept(detail::FileDescriptorPolicyUseErrorCode < P > )
+  auto bind(const socket_address& address, std::error_code& error) -> void
   {
-    int ret = ::bind(
-      static_cast<const F2 *>(this)->get(),
-      reinterpret_cast<::sockaddr *>(const_cast<socket_address *>(&socketAddress)),
-      sizeof(socket_address));
-
-    if (ret == 0)
-    {
-      if constexpr (file_descriptor_has_module_v<std::decay_t<F2>, xynet::template address>)
+    detail::sync_operation
+    (
+      [
+       fd   = static_cast<F2 *>(this)->get(),
+       addr = reinterpret_cast<::sockaddr *>(const_cast<socket_address *>(&address)),
+       size = sizeof(socket_address)
+      ]
+      ()
       {
-        static_cast<F2 *>(this)->set_local_address(socketAddress);
-      }
-    }
-
-    return sync_throw_or_return<P>(ret);
+        return ::bind(fd, addr, size);
+      },
+      [file = static_cast<F2 *>(this), addr = address](int ret)
+      {
+        if constexpr 
+        (file_descriptor_has_module_v
+        <
+          std::remove_pointer_t<decltype(file)>, 
+          xynet::template address
+        >)
+        {
+          // if bind to zero, a random port will be assigned
+          if(addr.port() == uint16_t{0})
+          {
+            auto addr2 = ::sockaddr_in{};
+            socklen_t len   = sizeof(addr2);
+            ::getsockname(file->get(), reinterpret_cast<sockaddr*>(&addr2), &len);
+            file->set_local_address(socket_address{addr2});
+          }
+          else
+          {
+            file->set_local_address(addr);
+          }
+          
+        }
+      },
+      error
+    );
   }
+
+  auto bind(const socket_address& address) -> void
+  {
+    auto error = std::error_code{};
+    bind(address, error);
+    if(error)
+    {
+      throw std::system_error{error};
+    }
+  }
+
 };
 
 }

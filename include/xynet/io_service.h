@@ -10,9 +10,11 @@
 #include <liburing.h>
 #include <chrono>
 #include <atomic>
+#include <stop_token>
 
 #include "xynet/async_operation_base.h"
 #include "xynet/detail/timeout_storage.h"
+
 
 namespace xynet
 {
@@ -32,25 +34,59 @@ public:
   io_service& operator=(const io_service&) = delete;
   io_service& operator=(io_service&&) = delete;
 
-  void run() noexcept;
+  void run(std::stop_token token) noexcept;
 
-  class run_after_operation : public async_operation_base
+  template<bool enable_timeout>
+  class schedule_operation : public async_operation_base
   {
   public:
+
+    schedule_operation(io_service* service)
+    : async_operation_base{service, &schedule_operation::on_schedule_remote_complete}
+    , m_timeout{}
+    {}
+    
     template<typename Duration>
-    run_after_operation(io_service* service, Duration&& duration)
-    :async_operation_base{service}
+    schedule_operation(io_service* service, Duration&& duration)
+    :async_operation_base{service, &schedule_operation::on_schedule_remote_complete}
     ,m_timeout{std::forward<Duration>(duration)}
     {}
 
+    static void on_schedule_remote_complete(async_operation_base* base) noexcept
+    {
+      auto* op = static_cast<schedule_operation*>(base);
+      if constexpr (enable_timeout)
+      {
+        op->submit_timeout();
+        base->set_callback(&async_operation_base::on_operation_completed);
+      }
+      else
+      {
+        async_operation_base::on_operation_completed(base);
+      }
+    }
+
+
     bool await_ready() noexcept
     {
-      return m_timeout.is_zero_timeout();
+      if constexpr (enable_timeout)
+      {
+        return false;
+      }
+      else
+      {
+        return get_service() == io_service::get_thread_io_service();
+      }
     }
 
     void await_suspend(std::coroutine_handle<> awaiting_coroutine) noexcept
     {
       set_awaiting_coroutine(awaiting_coroutine);
+      get_service()->schedule_remote(this);
+    }
+
+    void submit_timeout() noexcept
+    {
       get_service()->try_submit_io([this](::io_uring_sqe* sqe)
       {
         ::io_uring_prep_timeout(sqe, m_timeout.get_timespec_ptr(), 0, 0);
@@ -61,7 +97,7 @@ public:
     void await_resume() noexcept{return;}
 
   private:
-    detail::timeout_storage<true> m_timeout;
+    detail::timeout_storage<enable_timeout> m_timeout;
   };
 
 //  [[nodiscard]]
@@ -73,9 +109,14 @@ public:
   
   template<typename Duration>
   [[nodiscard]]
-  decltype(auto) run_after(Duration&& duration) noexcept
+  decltype(auto) schedule(Duration&& duration) noexcept
   {
-    return run_after_operation{this, std::forward<Duration>(duration)};
+    return schedule_operation<true>{this, std::forward<Duration>(duration)};
+  }
+
+  decltype(auto) schedule() noexcept
+  {
+    return schedule_operation<false>{this};
   }
 
   void schedule_impl(operation_base_ptr) noexcept;

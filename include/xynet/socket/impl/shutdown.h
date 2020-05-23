@@ -6,19 +6,39 @@
 #define XYNET_SHUTDOWN_H
 
 #include "xynet/detail/file_descriptor_traits.h"
-#include "xynet/detail/throw_or_return.h"
 
 namespace xynet
 {
 
-template <detail::FileDescriptorPolicy P, typename T>
+template <typename F>
 struct operation_shutdown
 {
-  decltype(auto) shutdown(int how = SHUT_WR)
-  noexcept(detail::FileDescriptorPolicyUseErrorCode<P>)
+  auto shutdown(int flags, std::error_code& error) -> void
   {
-    int ret = ::shutdown(static_cast<const T*>(this)->get(), how);
-    return sync_throw_or_return<P>(ret);
+    detail::sync_operation
+    (
+      [fd = static_cast<F*>(this)->get(), flags]()
+      {
+        return ::shutdown(fd, flags);
+      },
+      []([[maybe_unused]]int){},
+      error
+    );
+  }
+  
+  auto shutdown(std::error_code& error) -> void
+  {
+    shutdown(SHUT_WR);
+  }
+
+  auto shutdown(int flags = SHUT_WR) -> void
+  {
+    auto error = std::error_code{};
+    shutdown(flags, error);
+    if(error)
+    {
+      throw std::system_error{error};
+    }
   }
 };
 

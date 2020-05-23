@@ -6,35 +6,50 @@
 #define XYNET_SOCKET_SETSOCKOPT_H
 
 #include "xynet/detail/file_descriptor_traits.h"
-#include "xynet/detail/throw_or_return.h"
+#include "xynet/detail/sync_operation.h"
 
 namespace xynet
 {
 
-template <detail::FileDescriptorPolicy P, typename T>
+template <typename T>
 struct operation_set_options
 {
-private:
-  decltype(auto) set_options(int level, int optname, const void* optval, socklen_t optlen)
-  noexcept(detail::FileDescriptorPolicyUseErrorCode<P>)
+  auto setsockopt(int level, int optname, const void* optval, socklen_t optlen, std::error_code& error) noexcept 
+  -> void
   {
-    int ret = ::setsockopt(
-      static_cast<const T*>(this)->get(),
-      level,
-      optname,
-      optval,
-      optlen
+    detail::sync_operation
+    (
+      [fd = static_cast<const T*>(this)->get(), level, optname, optval, optlen]()
+      {
+        return ::setsockopt(fd, level,
+          optname, optval, optlen);
+      },
+      []([[maybe_unused]]int ret){},
+      error
     );
-
-    return sync_throw_or_return<P>(ret);
   }
 
-public:
-  decltype(auto) reuse_address()
-  noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
+  auto setsockopt(int level, int optname, const void* optval, socklen_t optlen) 
+  -> void
+  {
+    auto error = std::error_code{};
+    setsockopt(level, optname, optval, optlen, error);
+    if(error)
+    {
+      throw std::system_error{error};
+    }
+  }
+
+  auto reuse_address(std::error_code& error) noexcept -> void
   {
     int optval = 1;
-    return set_options(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    setsockopt(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval), error);
+  }
+
+  auto reuse_address() -> void
+  {
+    int optval = 1;
+    setsockopt(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
   }
 };
 

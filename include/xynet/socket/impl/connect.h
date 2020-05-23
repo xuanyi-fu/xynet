@@ -10,79 +10,75 @@
 namespace xynet
 {
 
-template<detail::FileDescriptorPolicy P, typename F>
+template<typename Policy, typename F>
+struct async_connect : public async_operation<Policy, async_connect<Policy, F>>
+{
+  template<typename... Args>
+  async_connect(F& socket, sockaddr_in addr, Args&&... args) noexcept
+  : async_operation<Policy, async_connect<Policy, F>>{std::forward<Args>(args)...}
+  , m_socket{socket}
+  , m_addr{addr}
+  {}
+
+  auto initial_check() const noexcept
+  {
+    return true;
+  }
+
+  auto try_start() noexcept
+  {
+    return [this](::io_uring_sqe *sqe)
+    {
+      ::io_uring_prep_connect(sqe,
+                              m_socket.get(),
+                              reinterpret_cast<sockaddr *>(&m_addr),
+                              m_addrlen);
+
+      sqe->user_data = reinterpret_cast<uintptr_t>(this);
+    };
+  }
+
+  decltype(auto) get_result()
+  noexcept (Policy::error_code_type::value)
+  {
+    if (!async_operation_base::get_error_code())[[likely]]
+    {
+      if constexpr(file_descriptor_has_module_v<std::decay_t<F>, xynet::template address>)
+      {
+        m_socket.set_peer_address(socket_address{m_addr});
+      }
+    }
+    else
+    {
+      if constexpr (Policy::error_code_type::value)
+      {
+        return;
+      }
+      else
+      {
+        throw std::system_error{async_operation_base::get_error_code()};
+      }
+    }
+  }
+private:
+  F&  m_socket;
+  ::sockaddr_in m_addr;
+  ::socklen_t m_addrlen = sizeof(::sockaddr_in);
+};
+
+template<typename F, typename... Args>
+async_connect(F& socket, sockaddr_in addr, Args&&... args) noexcept
+-> async_connect<typename async_operation_traits<std::decay_t<Args>...>::policy_type, F>;
+
+template<typename F>
 struct operation_connect
 {
-  template<bool enable_timeout = false>
-  struct async_connect : public async_operation<P, async_connect<enable_timeout>, enable_timeout>
-  {
-
-    async_connect(F& socket, sockaddr_in addr) noexcept
-    requires(enable_timeout == false)
-    : async_operation<P, async_connect<enable_timeout>, enable_timeout>{}
-    , m_socket{socket}
-    , m_addr{addr}
-    {}
-
-    template<typename Duration, bool enable_timeout2 = enable_timeout>
-    requires (enable_timeout2 == true)
-    async_connect(F& socket, sockaddr_in addr, Duration&& duration)
-    : async_operation<P, async_connect<enable_timeout>, enable_timeout>{std::forward<Duration>(duration)}
-    , m_socket{socket}
-    , m_addr{addr}
-    {}
-
-    auto initial_check() const noexcept
-    {
-      return true;
-    }
-
-    auto try_start() noexcept
-    {
-      return [this](::io_uring_sqe *sqe)
-      {
-        ::io_uring_prep_connect(sqe,
-                               m_socket.get(),
-                               reinterpret_cast<sockaddr *>(&m_addr),
-                               m_addrlen);
-
-        sqe->user_data = reinterpret_cast<uintptr_t>(this);
-      };
-    }
-
-    auto get_result()
-    noexcept (detail::FileDescriptorPolicyUseErrorCode<P>)
-    -> detail::file_descriptor_operation_return_type_t<P>
-    {
-      if (async_operation_base::no_error_in_result())
-      {
-        if constexpr(file_descriptor_has_module_v<std::decay_t<F>, xynet::template address>)
-        {
-          m_socket.set_peer_address(socket_address{m_addr});
-        }
-      }
-      return async_throw_or_return<P>(async_operation_base::get_error_code());
-    }
-  private:
-    F&  m_socket;
-    ::sockaddr_in m_addr;
-    ::socklen_t m_addrlen = sizeof(::sockaddr_in);
-  };
-
-
+  template<typename... Args>
   [[nodiscard]]
-  decltype(auto) connect(const socket_address& address) noexcept 
+  decltype(auto) connect(const socket_address& address, Args&&... args) noexcept 
   {
-    return async_connect<false>{*static_cast<F*>(this), *address.as_sockaddr_in()};
+    return async_connect{*static_cast<F*>(this), *address.as_sockaddr_in(), std::forward<Args>(args)...};
   }
-
-  template<typename Duration>
-  [[nodiscard]]
-  decltype(auto) connect_timeout(const socket_address& address, Duration&& duration) noexcept 
-  {
-    return async_connect<true>{*static_cast<F*>(this), *address.as_sockaddr_in(), std::forward<Duration>(duration)};
-  }
-
 };
 
 }
