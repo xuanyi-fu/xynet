@@ -14,6 +14,13 @@ namespace xynet
 template<typename F>
 struct operation_listen
 {
+  /// \brief      put the socket into listen state by calling listen(2) on the fd of the socket.
+  ///             Report error by error_code.
+  /// 
+  /// \param[in]  backlog defines the maximum length to which the queue of pending connections 
+  ///             for sockfd may grow.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   auto listen(int backlog, std::error_code& error) -> void
   {
     detail::sync_operation
@@ -27,11 +34,21 @@ struct operation_listen
     );
   }
 
+  /// \brief      put the socket into listen state by calling listen(2) on the fd of the socket.
+  ///             Backlog is SOMAXCONN. Report error by error_code.
+  ///
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   auto listen(std::error_code& error) -> void
   {
     listen(SOMAXCONN, error);
   }
 
+  /// \brief      put the socket into listen state by calling listen(2) on the fd of the socket.
+  ///             Report error by exception.
+  ///
+  /// \param[in]  backlog defines the maximum length to which the queue of pending connections 
+  ///             for sockfd may grow.
   auto listen(int backlog) -> void
   {
     auto error = std::error_code{};
@@ -42,6 +59,8 @@ struct operation_listen
     }
   }
 
+  /// \brief      put the socket into listen state by calling listen(2) on the fd of the socket.
+  ///             Backlog is SOMAXCONN. Report error by exception.
   auto listen() -> void
   {
     listen(SOMAXCONN);

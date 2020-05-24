@@ -21,8 +21,9 @@ struct async_recvmsg_policy : public BasePolicy::policy_type
 };
 
 template<typename Policy, typename F>
-struct async_recvmsg : public async_operation<Policy, async_recvmsg<Policy, F>>
+class async_recvmsg : public async_operation<Policy, async_recvmsg<Policy, F>>
 {
+public:
   template<typename... Args>
   async_recvmsg(F& socket, Args&&... args) noexcept
     :async_operation<Policy, async_recvmsg<Policy, F>>{&async_recvmsg::on_recv_completed}
@@ -60,12 +61,11 @@ struct async_recvmsg : public async_operation<Policy, async_recvmsg<Policy, F>>
     ,m_bytes_transferred{}
     ,m_msghdr{.msg_iov = m_buffers.get_iov_ptr(), .msg_iovlen = m_buffers.get_iov_cnt()}
   {}
-
+private:
   auto initial_check() const noexcept
   {
     return true;
   }
-
 
   static void on_recv_completed(async_operation_base *base) noexcept
   {
@@ -138,8 +138,8 @@ struct async_recvmsg : public async_operation<Policy, async_recvmsg<Policy, F>>
 
     return m_bytes_transferred;
   }
-
-private:
+  
+  friend async_operation<Policy, async_recvmsg<Policy, F>>;
   F& m_socket;
   Policy::buffer_type m_buffers;
   int m_bytes_transferred;
@@ -149,6 +149,21 @@ private:
 template<typename F>
 struct operation_recv
 {
+  /// \brief      create an awaiter for calling recvmsg(2) asynchronously.
+  /// \param[out] args buffers that will be filled satisfy the following requirements:
+  ///             If there is one parameter in args, this parameter could be:
+  ///               - An lvalue reference of a type 'T', which satisfies std::ranges::viewable_range<T&>
+  ///                 && std::ranges::contiguous_range<std::ranges::range_value_t<T>>. That is, T must be an
+  ///                 lvalue reference of a viewable range of contiguous ranges.
+  ///               - A contiguous range that can be used to construct a std::span<byte, size or std::dynamic_extent>.
+  ///             If there is more than one parameters in args, they must be contiguous ranges that can be used to 
+  ///             construct std::span<byte, size or std::dynamic_extent>'s.
+  ///             
+  /// \note       - The buffers will be filled with the same order as the order they were in the lvalue reference 
+  ///               of a viewable range or the order they were in args. 
+  ///             - The operation will finish if there is an error(including the socket reads EOF) or all 
+  ///               the buffers are filled. That is, it may use recvmsg(2) more than once.
+  ///             - After the operation is co_await'ed and then finish, it will return the bytes transferred.           
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) recv(Args&&... args) noexcept
@@ -158,6 +173,9 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv(Args&&... args), but use std::error_code to report error.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) recv(std::error_code& error, Args&&... args) noexcept
@@ -167,6 +185,9 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), error, std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv(Args&&... args), but imposes a timout on each single recv operation.
+  /// \param[in] duration If one single recvmsg(2) does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned. 
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) recv(Duration&& duration, Args&&... args) noexcept
@@ -176,6 +197,12 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), std::forward<Duration>(duration), std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv(Args&&... args), but imposes a timout on each single recv operation and reports error
+  ///        by std::error_code
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
+  /// \param[in] duration If one single recvmsg(2) does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned. 
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) recv(Duration&& duration, std::error_code& error, Args&&... args) noexcept
@@ -185,8 +212,9 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), std::forward<Duration>(duration), error, std::forward<Args>(args)...};
   }
 
-  // recv some
-
+  /// \brief same as recv(Args&&... args), but it will not try to fill all the buffers. If co_await'ed, 
+  ///        this awaiter will resume the coroutine after the first recv operation finished, regardless 
+  ///        of whether the buffers are filled up or not.
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) recv_some(Args&&... args) noexcept
@@ -196,6 +224,9 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv_some(Args&&... args), but use std::error_code to report error.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) recv_some(std::error_code& error, Args&&... args) noexcept
@@ -205,6 +236,9 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), error, std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv_some(Args&&... args), but imposes a timout on each single recv operation.
+  /// \param[in] duration If the operation does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned. 
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) recv_some(Duration&& duration, Args&&... args) noexcept
@@ -214,6 +248,12 @@ struct operation_recv
     return async_recvmsg<policy, F>{*static_cast<F*>(this), std::forward<Duration>(duration), std::forward<Args>(args)...};
   }
 
+  /// \brief same as recv_some(Args&&... args), but imposes a timout on each single recv operation and reports error
+  ///        by std::error_code
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
+  /// \param[in] duration If the operation does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned. 
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) recv_some(Duration&& duration, std::error_code& error, Args&&... args) noexcept

@@ -30,9 +30,9 @@ struct null_buffer
 };
 
 template<typename Policy, typename F>
-struct async_close : public async_operation<Policy, async_close<Policy, F>>
+class async_close : public async_operation<Policy, async_close<Policy, F>>
 {
-
+public:
   template<typename... Args>
   async_close(F& socket, Args&&... args) noexcept
   : async_operation<Policy, async_close<Policy, F>>
@@ -40,6 +40,7 @@ struct async_close : public async_operation<Policy, async_close<Policy, F>>
   , m_socket{socket}
   {}
 
+private:
   auto initial_check() const noexcept
   {
     return m_socket.valid();
@@ -99,8 +100,7 @@ struct async_close : public async_operation<Policy, async_close<Policy, F>>
       }
     }
   }
-
-private:
+  friend async_operation<Policy, async_close<Policy, F>>;
   F& m_socket;
 };
 
@@ -111,6 +111,28 @@ async_close(F& socket, Args&&... args) noexcept
 template<typename F>
 struct operation_close
 {
+  /// \brief      Create an awaiter to close a socket. This operation will first read from
+  ///   the socket until it reads a 0(eof). Then it will call close(2) on the socket.
+  /// \param      args        
+  /// 
+  /// 1. Args is void: 
+  ///   The awaiter returned by the function will throw exception to report the error.
+  ///   A std::system_error constructed with the corresponding std::error_code will be 
+  ///   throwed if the accept operation is failed after being co_await'ed.
+  ///  
+  /// 2. Args is a Duration, i.e. std::chrono::duration<Rep, Period>. 
+  ///   This duration will be treated as the timeout for the operation. If the operation 
+  ///   does not finish within the given duration, the operation will be canneled and an error_code
+  ///   (std::errc::operation_canceled) will be returned. 
+  ///   Notice that the timeout is imposed on each single read operation separately.
+  ///   
+  /// 3. Args is an lvalue reference of a std::error_code
+  ///   The awaiter returned by the function will use std::error_code to report the error.
+  ///   Should there be an error in the operation, the std::error_code passed by lvalue reference will 
+  ///   be reset. Otherwise, it will be clear.
+  /// 
+  /// 4. Args are first a Duration, second an lvalue reference of a std::error_code
+  ///   The operation will have the features described in 2 and 3.
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) close(Args&&... args) noexcept 

@@ -120,11 +120,10 @@ auto service_start(io_service& service, stop_token token) -> task<>
 }
 
 
-TEST_CASE("send / recv")
+TEST_CASE("send / recv" * doctest::timeout(10.0))
 {
   auto service = io_service{};
   
-
   SUBCASE("recv/send 0 byte")
   {
     auto PORT = port_gen();
@@ -140,6 +139,205 @@ TEST_CASE("send / recv")
     {
       int i = 0;
       REQUIRE_THROWS_WITH(co_await s.recv(std::span{&i, 0}), "connection read eof.");
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
+
+  SUBCASE("send/recv some bytes")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    array<char, 5> msg{'x', 'y', 'n', 'e', 't'};
+
+
+    auto client = [&](socket_t s) -> task<>
+    {
+      REQUIRE_NOTHROW(co_await s.send(msg));
+      co_await close_socket(s);
+    };
+
+    auto server = [&](socket_t s) -> task<>
+    {
+      array<char, 5> buf{};
+      REQUIRE_NOTHROW(co_await s.recv(buf));
+      CHECK(string_view{msg.data(), msg.size()} == string_view{buf.data(), buf.size()});
+      co_await close_socket(s);
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
+
+  SUBCASE("send/recv 64K bytes")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    array<char, 65536> msg{'x'};
+
+
+    auto client = [&](socket_t s) -> task<>
+    {
+      REQUIRE_NOTHROW(co_await s.send(msg));
+      co_await close_socket(s);
+    };
+
+    auto server = [&](socket_t s) -> task<>
+    {
+      array<char, 65536> buf{};
+      REQUIRE_NOTHROW(co_await s.recv(buf));
+      CHECK(string_view{msg.data(), msg.size()} == string_view{buf.data(), buf.size()});
+      co_await close_socket(s);
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
+
+  SUBCASE("send/recv 64K bytes / send part")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    array<char, 65536> msg{'x'};
+
+
+    auto client = [&](socket_t s) -> task<>
+    {
+      for(auto i = msg.begin(); i != msg.end(); i += 1024)
+      {
+        REQUIRE_NOTHROW(co_await s.send(std::span{i, i + 1024}));
+      }
+      
+      co_await close_socket(s);
+    };
+
+    auto server = [&](socket_t s) -> task<>
+    {
+      array<char, 65536> buf{};
+      REQUIRE_NOTHROW(co_await s.recv(buf));
+      CHECK(string_view{msg.data(), msg.size()} == string_view{buf.data(), buf.size()});
+      co_await close_socket(s);
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
+
+  SUBCASE("send/recv 64K bytes / send+recv part")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    array<char, 65536> msg;
+    fill(msg.begin(), msg.end(), 'x');
+
+
+    auto client = [&](socket_t s) -> task<>
+    {
+      for(auto i = msg.begin(); i != msg.end(); i += 1024)
+      {
+        REQUIRE_NOTHROW(co_await s.send(std::span{i, i + 1024}));
+      }
+      
+      co_await close_socket(s);
+    };
+
+    auto server = [&](socket_t s) -> task<>
+    {
+      array<char, 65536> buf{};
+      for(auto i = buf.begin(); i != buf.end(); ++i)
+      {
+        auto recv_bytes = 0;
+        recv_bytes = co_await s.recv_some(std::span{i, 1});
+      }
+      
+      CHECK(string_view{msg.data(), msg.size()} == string_view{buf.data(), buf.size()});
+      co_await close_socket(s);
+    };
+
+    auto test_recv_send_0 = [&]() -> task<>
+    {
+      co_await when_all(
+        connector(client, PORT),
+        acceptor(server, service, PORT)
+      );
+
+      source.request_stop();
+    };
+
+    sync_wait(when_all(
+      test_recv_send_0(),
+      service_start(service, source.get_token())
+    ));
+  }
+
+  SUBCASE("recv timeout")
+  {
+    auto PORT = port_gen();
+    auto source = stop_source{};
+    array<char, 5> msg{'x', 'y', 'n', 'e', 't'};
+
+
+    auto client = [&](socket_t s) -> task<>
+    {
+      co_await service.schedule(chrono::milliseconds{100});
+      REQUIRE_NOTHROW(co_await s.send(msg));
+      co_await close_socket(s);
+    };
+
+    auto server = [&](socket_t s) -> task<>
+    {
+      array<char, 5> buf{};
+      REQUIRE_THROWS_WITH(co_await s.recv(chrono::milliseconds{50}, buf), "Operation canceled");
+      co_await close_socket(s);
     };
 
     auto test_recv_send_0 = [&]() -> task<>

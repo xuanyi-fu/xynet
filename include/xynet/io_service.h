@@ -127,13 +127,17 @@ public:
     schedule_operation(io_service* service)
     : async_operation_base{service, &schedule_operation::on_schedule_remote_complete}
     , m_timeout{}
-    {}
+    {
+      async_operation_base::set_error_ptr(&m_error);
+    }
     
     template<typename Duration>
     schedule_operation(io_service* service, Duration&& duration)
     :async_operation_base{service, &schedule_operation::on_schedule_remote_complete}
     ,m_timeout{std::forward<Duration>(duration)}
-    {}
+    {
+      async_operation_base::set_error_ptr(&m_error);
+    }
 
     static void on_schedule_remote_complete(async_operation_base* base) noexcept
     {
@@ -181,6 +185,7 @@ public:
 
   private:
     detail::timeout_storage<enable_timeout> m_timeout;
+    std::error_code m_error = {};
   };
 
   template<typename Duration>

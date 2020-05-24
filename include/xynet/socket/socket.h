@@ -5,8 +5,6 @@
 #ifndef XYNET_SOCKET_H
 #define XYNET_SOCKET_H
 
-// #include "xynet/socket/impl/policy.h"
-
 #include "xynet/socket/impl/socket_init.h"
 #include "xynet/socket/impl/address.h"
 

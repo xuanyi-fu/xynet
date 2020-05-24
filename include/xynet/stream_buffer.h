@@ -1,6 +1,7 @@
 #include <span>
 #include <vector>
 #include <streambuf>
+#include <cstring>
 
 namespace xynet
 {
