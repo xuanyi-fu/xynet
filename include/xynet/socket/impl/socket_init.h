@@ -17,6 +17,10 @@ namespace xynet
 template<typename F>
 struct socket_init
 {
+  /// \brief initialize the socket with IPv4 & TCP. That is, call ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP)
+  ///         and set the fd of file_descriptor.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   auto init(std::error_code& error) noexcept -> void
   {
     // we have to close the open socket first
@@ -39,6 +43,8 @@ struct socket_init
     );
   }
 
+  /// \brief initialize the socket with IPv4 & TCP. That is, call ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP)
+  ///         and set the fd of file_descriptor. Report error by exception.
   auto init() -> void
   {
     auto error = std::error_code{};

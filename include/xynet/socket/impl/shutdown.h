@@ -13,6 +13,10 @@ namespace xynet
 template <typename F>
 struct operation_shutdown
 {
+  /// \brief same as shutdown(2). report error by error_code.
+  /// \param[in]  flags indicates how will the socket be shutdown.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   auto shutdown(int flags, std::error_code& error) -> void
   {
     detail::sync_operation
@@ -25,12 +29,16 @@ struct operation_shutdown
       error
     );
   }
-  
+
+  /// \brief same as shutdown(2), with how = SHUT_WR. report error by error_code.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   auto shutdown(std::error_code& error) -> void
   {
     shutdown(SHUT_WR);
   }
 
+  /// \brief same as shutdown(2), with how = SHUT_WR. report error by exception.
   auto shutdown(int flags = SHUT_WR) -> void
   {
     auto error = std::error_code{};

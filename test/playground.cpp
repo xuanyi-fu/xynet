@@ -114,6 +114,7 @@ int main()
       for(;;)
       {
         auto recv_bytes = co_await peer_socket.recv(buffer);
+        [[maybe_unused]]
         auto send_bytes = co_await peer_socket.send(std::span{buffer.data(), recv_bytes});
       }
     }catch(...){}

@@ -143,6 +143,21 @@ private:
 template<typename F>
 struct operation_send
 {
+  /// \brief      create an awaiter for calling sendmsg(2) asynchronously.
+  /// \param[out] args buffers that satisfy the following requirements:
+  ///             If there is one parameter in args, this parameter could be:
+  ///               - An lvalue reference of a type 'T', which satisfies std::ranges::viewable_range<T&>
+  ///                 && std::ranges::contiguous_range<std::ranges::range_value_t<T>>. That is, T must be an
+  ///                 lvalue reference of a viewable range of contiguous ranges.
+  ///               - A contiguous range that can be used to construct a std::span<byte, size or std::dynamic_extent>.
+  ///             If there is more than one parameters in args, they must be contiguous ranges that can be used to 
+  ///             construct std::span<const byte, size or std::dynamic_extent>'s.
+  ///             
+  /// \note       - The content of buffers will be sent in the same order as they were in the lvalue reference 
+  ///               of a viewable range or the order they were in the parameter pack args. 
+  ///             - The operation will finish if there is an error(including the socket reads EOF) or all 
+  ///               the content of buffers are sent. That is, it may call sendmsg(2) more than once.
+  ///             - After the operation is co_await'ed and then finish, it will return the bytes transferred. 
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) send(Args&&... args) noexcept
@@ -157,6 +172,9 @@ struct operation_send
       {*static_cast<F*>(this), std::forward<Args>(args)...};
   }
 
+  /// \brief same as send(Args&&... args), but use std::error_code to report error.
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
   template<typename... Args>
   [[nodiscard]]
   decltype(auto) send(std::error_code& error, Args&&... args) noexcept
@@ -171,6 +189,9 @@ struct operation_send
       {*static_cast<F*>(this), error, std::forward<Args>(args)...};
   }
 
+  /// \brief same as send(Args&&... args), but imposes a timout on each single send operation.
+  /// \param[in] duration If one single sendmsg(2) does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned. 
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) send(Duration&& duration, Args&&... args) noexcept
@@ -185,6 +206,13 @@ struct operation_send
       {*static_cast<F*>(this), std::forward<Duration>(duration), std::forward<Args>(args)...};
   }
 
+
+  /// \brief same as send(Args&&... args), but imposes a timout on each single recv operation and reports error
+  ///        by std::error_code
+  /// \param[out] the std::error_code will be reset if there is an error. Otherwise, if
+  ///             will be cleared.
+  /// \param[in] duration If one single sendmsg(2) does not finish within the given duration, the operation will be 
+  ///                     canneled and an error_code (std::errc::operation_canceled) will be returned.
   template<DurationType Duration, typename... Args>
   [[nodiscard]]
   decltype(auto) send(Duration&& duration, std::error_code& error, Args&&... args) noexcept
