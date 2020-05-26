@@ -23,9 +23,11 @@ Requirements
 - [Liburing](https://www.github.com/axboe/liburing): 0.5(or later)
 - OpenSSL: for the SHA-1 in websocket(will be removed later)
 
-Usage
+Example
 -----
 
+Usage
+-----
 - `file_descriptor`
 
   ```cpp
@@ -120,6 +122,104 @@ Usage
   
   - [`address`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/address.h)
 
-    this module will increase the size of `file_descriptor`.
+    the size of `file_descriptor` will increase if this module is used.
+
     Getters and setters are provided: `set_local_address(const socket_address& address)`, `set_peer_address(const socket_address& address)`, `get_local_address()`, `get_peer_address()`.
     Moudles like `operation_accept`, `operation_connect` , will set the `address` on success. 
+
+
+  synchronous operation modules
+
+  - [`operation_shutdown`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/shutdown.h)
+
+    `shutdown(int how = SHUTWR)`, `shutdown(int how, std::error_code& error)`, `shutdown(std::error_code& error)`
+
+  - [`operation_bind`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/bind.h)
+
+    bind the socket to a given address. If module [`address`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/address.h) is used, set the local address on success. If `bind` with `socket_address{0}`, then a random port will be assigned and the local address will also be set on success.
+
+    `bind(const socket_address& address)`, `bind(const socket_address& address, std::error_code& error)` 
+
+  - [`operation_set_options`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/setsockopt.h)
+
+    call `::setsockopt`.
+
+    `void setsockopt(int level, int optname, const void* optval, socklen_t optlen, std::error_code& error)`, `void setsockopt(int level, int optname, const void* optval, socklen_t optlen)`,
+    `void reuse_address(std::error_code& error)`,
+    `void reuse_address()`
+
+  - [`operation_listen`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/listen.h)
+
+    put the socket into listen state
+    `listen(int backlog = SOMAXCONN)`, `listen(int backlog, std::error_code& error)`, `listen(std::error_code& error)`.
+
+  asynchronous operation modules
+
+  all asynchronous operations provides an optional argument `duration` to impose a timeout.
+
+  - [`operation_accept`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/accept.h)
+
+  ```cpp
+  template<typename F2, typename... Args> [[nodiscard]]
+  decltype(auto) accept(F2& peer_socket, Args&&... args) noexcept
+  ```
+
+    - `peer_socket` The socket into which the new connection will be accpeted.
+
+      1. Args is void: 
+      The awaiter returned by the function will throw exception to report the error.
+      A std::system_error constructed with the corresponding std::error_code will be 
+      throwed if the accept operation is failed after being co_await'ed.
+      2. Args is a Duration, i.e. std::chrono::duration<Rep, Period>. 
+      This duration will be treated as the timeout for the operation. If the operation 
+      does not finish within the given duration, the operation will be canneled and an error_code
+        (std::errc::operation_canceled) will be returned. 
+        
+      3. Args is an lvalue reference of a std::error_code
+      The awaiter returned by the function will use std::error_code to report the error.
+      Should there be an error in the operation, the std::error_code passed by lvalue reference will 
+      be reset. Otherwise, it will be clear.
+    
+      4. Args are first a Duration, second an lvalue reference of a std::error_code
+      The operation will have the features described in 2 and 3.
+  
+  - [`operation_connect`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/connect.h)
+
+  ```cpp
+  template<typename... Args> [[nodiscard]]
+  decltype(auto) connect(const socket_address& address, Args&&... args) noexcept
+  ```
+
+  `address`: the address with which the connection will be established.
+  `args`: same as `args` desribed in `operation_accept`
+
+  - [`operation_close`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/close.h)
+
+  This operation will read from the socket until it reads a 0(eof). Then it will call close(2) on the socket.
+
+  ```cpp
+  template<typename... Args>
+  [[nodiscard]]
+  decltype(auto) close(Args&&... args) noexcept 
+  ```
+
+  `args`: same as `args` desribed in `operation_accept`
+
+  - [`operation_recv`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/recv_all.h)
+
+    `recv([std::error_code& error], [Duration&& duration], Args&&... args)`
+    where `args` will be forwarded to the constructor of `buffer_sequence`.
+
+    - The buffers will be filled with the same order as the order they were in the lvalue reference  of a viewable range or the order they were in args. 
+    - The operation will finish if there is an error(including the socket reads EOF) or all the buffers are filled. That is, it may use recvmsg(2) more than once.
+    - After the operation is co_await'ed and then finishes, it will return the bytes transferred.
+
+    `recv_some([std::error_code& error], [Duration&& duration], Args&&... args)`
+    where `args` will be forwarded to the constructor of `buffer_sequence`.
+
+    this awaiter will resume the coroutine after the first recv operation finished, regardless of whether the buffers are filled up or not.
+
+  - [`operation_send`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/socket/impl/send_all.h)
+
+    `recv([std::error_code& error], [Duration&& duration], Args&&... args)`
+     where `args` will be forwarded to the constructor of `const_buffer_sequence`
