@@ -26,6 +26,18 @@ Requirements
 Example
 -----
 
+- [RFC864 Character Generator Protocol](https://tools.ietf.org/html/rfc864): [chargen.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/simple/chargen.cpp)
+- [RFC867 Daytime Protocol](https://tools.ietf.org/html/rfc867): [daytime.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/simple/daytime.cpp)
+- [RFC863 Discard Protocol](https://tools.ietf.org/html/rfc863): [discard.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/simple/discard.cpp)
+- [RFC862 Echo Protocol](https://tools.ietf.org/html/rfc862): [echo.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/simple/echo.cpp)
+- [RFC868 Time Protocol](https://tools.ietf.org/html/rfc862): [time.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/simple/time.cpp)
+- boost::asio ping-pong performance test: [pingpong](https://github.com/xuanyi-fu/xynet/tree/master/example/pingpong)
+- [ttcp](https://en.wikipedia.org/wiki/Ttcp): [ttcp](https://github.com/xuanyi-fu/xynet/tree/master/example/ttcp)
+- boost::asio chatroom: [chat](https://github.com/xuanyi-fu/xynet/tree/master/example/chat)
+- websocket discard: [websocket_discard.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/websocket/websocket_discard.cpp)
+- websocket echo: [websocket_echo.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/websocket/websocket_echo.cpp)
+- [boost::beast websocket chatroom](https://www.boost.org/doc/libs/1_70_0/libs/beast/doc/html/beast/examples.html#beast.examples.chat_server): [websocket_chat.cpp](https://github.com/xuanyi-fu/xynet/blob/master/example/websocket/websocket_chat.cpp)
+
 Usage
 -----
 - `file_descriptor`
