@@ -1,6 +1,6 @@
 xynet
 =====
-Experimental C++ network library based on io_uring and coroutine.
+Experimental C++ network library based on io_uring and coroutine. This project is developed for understanding and practice C++20 new features(ranges, coroutine) and new Linux I/O API io_uring.  
 
 Features
 -----
@@ -11,6 +11,7 @@ Features
 - [`file_descriptor`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/file_descriptor.h) is designed in the CRTP Mixin pattern, all operations(recv, send, listen...) are modularized and thus optional.
 - [`buffer_sequence`](https://github.com/xuanyi-fu/xynet/blob/master/include/xynet/buffer.h) is designed to be compatible with C++20 [`std::span`](https://en.cppreference.com/w/cpp/header/span)
 - like C++17 [`<filesystem>`](https://en.cppreference.com/w/cpp/header/filesystem), support error handling in both `std::error_code` and exception
+- coroutine part is based on Lewis Baker's [cppcoro](https://github.com/lewissbaker/cppcoro), modified so that it could compile using gcc10.
 - Efficient:
   - Few dynamic allocation: most of the allocations are for the coroutine stack itself.
   - Few system calls compared with epoll based libraries: All asynchronous operations are submitted and reaped through io_uring by a single system call.
